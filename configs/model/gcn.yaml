@@ -1,0 +1,10 @@
+defaults:
+  - base
+
+net:
+  conv:
+    _target_: src.models.layer.general.LayerWrapper
+    layer:
+      _target_: torch_geometric.nn.conv.GCNConv
+      in_channels: ${model.net.dim_inner}
+      out_channels: ${model.net.dim_inner}

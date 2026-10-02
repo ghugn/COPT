@@ -1,0 +1,35 @@
+{
+  "tasks": [
+    "maxcut"
+  ],
+  "dim_out": {
+    "maxcut": 1,
+    "maxclique": 1,
+    "mds": 1,
+    "mis": 1,
+    "mvc": 1,
+    "color": 10,
+    "cliquecover": 10,
+    "hcp": 200
+  },
+  "timestamp": "D:\\Downloads\\Lab_resource\\Task5-MHoang\\COPT-MT-main\\logs\\debug\\runs\\2026-10-01_15-26-48",
+  "seed": 12345,
+  "tags": [
+    "multitask",
+    "ba",
+    "small",
+    "gcon"
+  ],
+  "checkpoint_path": null,
+  "best_checkpoint_path": null,
+  "monitored_metric": null,
+  "best_metrics": {
+    "maxcut": {
+      "size": 480.5
+    }
+  },
+  "trainer_config": {
+    "max_epochs": 1,
+    "gradient_clip_val": 0.5
+  }
+}
