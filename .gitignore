@@ -13,9 +13,11 @@ ENV/
 # Exclude PDF files (do not upload paper PDF)
 *.pdf
 
-# Datasets & generated graph cache
-data/
-data/**
+# Datasets & generated graph cache (only root /data/)
+/data/
+!configs/data/
+!src/data/
+
 
 # Compressed archives
 *.zip
