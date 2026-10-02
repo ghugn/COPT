@@ -4,11 +4,11 @@
 # python src/train.py experiment=gcn_node_classification
 
 defaults:
-  - override /data: snap_dataset.yaml
-  - override /model: gcn.yaml
-  - override /callbacks: default.yaml
-  - override /trainer: default.yaml
-  - override /logger: wandb.yaml
+  - override /data: snap_dataset
+  - override /model: gcn
+  - override /callbacks: default
+  - override /trainer: default
+  - override /logger: wandb
 
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters

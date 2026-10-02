@@ -4,10 +4,10 @@
 # python src/train.py experiment=gcn_node_classification
 
 defaults:
-  - override /data: gnn_benchmark.yaml
-  - override /model: gcn.yaml
-  - override /callbacks: default.yaml
-  - override /trainer: default.yaml
+  - override /data: gnn_benchmark
+  - override /model: gcn
+  - override /callbacks: default
+  - override /trainer: default
 
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters

@@ -1,12 +1,12 @@
 # @package _global_
 
 defaults:
-  - override /data: ba_large.yaml
-  - override /model: gcon.yaml
-  - override /task: cliquecover.yaml
-  - override /callbacks: default.yaml
-  - override /trainer: default.yaml
-  - override /logger: wandb.yaml
+  - override /data: ba_large
+  - override /model: gcon
+  - override /task: cliquecover
+  - override /callbacks: default
+  - override /trainer: default
+  - override /logger: wandb
 
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters

@@ -1,12 +1,12 @@
 # @package _global_
 
 defaults:
-  - override /data: rb_small.yaml
-  - override /model: gcon.yaml
-  - override /task: mis.yaml
-  - override /callbacks: default.yaml
-  - override /trainer: default.yaml
-  - override /logger: wandb.yaml
+  - override /data: rb_small
+  - override /model: gcon
+  - override /task: mis
+  - override /callbacks: default
+  - override /trainer: default
+  - override /logger: wandb
 
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
