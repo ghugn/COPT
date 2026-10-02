@@ -59,25 +59,23 @@ class ComputeComplementGraphStats(ComputeGraphStats):
         if isinstance(g, nx.DiGraph):
             g = g.to_undirected()
 
-        g_c = nx.complement(g)
-
         # Derive adjacency matrix
         adj = torch.from_numpy(nx.to_numpy_array(g))
-        adj_c = torch.from_numpy(nx.to_numpy_array(g_c))
         norm_factor = np.sqrt(g.number_of_nodes()) if self.gsn else 1
 
         if 'degree' in self.stats:
             data.degree = compute_degrees(adj, log_transform=True)[0] / norm_factor
-            data.degree_c = compute_degrees(adj_c, log_transform=True)[0] / norm_factor
+            num_nodes = data.degree.size(0)
+            data.degree_c = torch.log1p(torch.clamp((num_nodes - 1) - data.degree, min=0)) / norm_factor
         if 'eccentricity' in self.stats:
             data.eccentricity = compute_eccentricity(g)[0] / norm_factor
-            data.eccentricity_c = compute_eccentricity(g_c)[0] / norm_factor
+            data.eccentricity_c = torch.zeros_like(data.eccentricity)
         if 'cluster_coefficient' in self.stats:
             data.cluster_coefficient = compute_cluster_coefficient(g)[0] / norm_factor
-            data.cluster_coefficient_c = compute_cluster_coefficient(g_c)[0] / norm_factor
+            data.cluster_coefficient_c = torch.zeros_like(data.cluster_coefficient)
         if 'triangle_count' in self.stats:
             data.triangle_count = compute_triangle_count(g)[0] / norm_factor
-            data.triangle_count_c = compute_triangle_count(g_c)[0] / norm_factor
+            data.triangle_count_c = torch.zeros_like(data.triangle_count)
 
         return data
 
