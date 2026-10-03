@@ -33,7 +33,7 @@ def get_latest_metric(task, log_type="train"):
     base_dir = Path(f"logs/{log_type}/runs")
     if not base_dir.exists():
         return None
-    csv_files = list(base_dir.glob("**/csv/version_0/metrics.csv"))
+    csv_files = list(base_dir.glob("**/metrics.csv"))
     if not csv_files:
         return None
     # Sort by modification time, newest first
@@ -99,6 +99,8 @@ def main():
     parser.add_argument("--epochs", type=int, default=20, help="Epochs for baseline and finetuning (default: 20)")
     parser.add_argument("--tasks", nargs="+", default=TASKS)
     parser.add_argument("--force", action="store_true", help="Force re-run even if task is already in cached results")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed for data & model initialization (default: 42)")
+    parser.add_argument("--color_direct_eval", action="store_true", help="Evaluate pretrained foundation backbone head directly for COLORING")
     args = parser.parse_args()
 
     results = {task: {"finetuned": None, "baseline": None, "full": None} for task in TASKS}
@@ -132,37 +134,17 @@ def main():
     # 2. RUN BASELINES FROM SCRATCH (20 epochs)
     if args.mode in ["all", "baseline"]:
         print("\n" + "="*70)
-        print(f"STAGE 2: Training Single-Task Baselines from Scratch ({args.epochs} epochs)")
+        print(f"STAGE 2: Training Single-Task Baselines from Scratch ({args.epochs} epochs, seed={args.seed})")
         print("="*70)
         for task in args.tasks:
             if not args.force and results[task]["baseline"] is not None:
                 print(f"---> [BASELINE]: Skipping {task.upper()} (Already computed: {results[task]['baseline']})")
                 continue
-            print(f"\n---> [BASELINE]: Starting {task.upper()} ({args.epochs} epochs)...")
-            cmd = f"{sys.executable} src/train.py experiment=multitask/ba_small/gcon model.net.tasks=[{task}] trainer.max_epochs={args.epochs} trainer.check_val_every_n_epoch={args.epochs} trainer.accelerator=auto logger=csv hydra/job_logging=default hydra/hydra_logging=default paths.root_dir=. data.num_workers=2"
-            run_command(cmd)
-            val = get_latest_metric(task, log_type="train")
-            results[task]["baseline"] = val
-            print(f"---> [BASELINE]: {task.upper()} finished with result: {val}")
-            save_and_print_table(results, TASKS)
-
-    # 3. RUN FINE-TUNED (20 epochs from Foundation Model)
-    if args.mode in ["all", "finetuned"]:
-        print("\n" + "="*70)
-        print(f"STAGE 3: Fine-Tuning from Pretrained Backbone ({args.epochs} epochs)")
-        print("="*70)
-        for task in args.tasks:
-            if not args.force and results[task]["finetuned"] is not None:
-                print(f"---> [FINE-TUNED]: Skipping {task.upper()} (Already computed: {results[task]['finetuned']})")
-                continue
-            print(f"\n---> [FINE-TUNED]: Starting {task.upper()} ({args.epochs} epochs)...")
-            strat = "linear_probing" if task == "color" else "finetuning"
+            print(f"\n---> [BASELINE]: Starting {task.upper()} ({args.epochs} epochs, seed={args.seed})...")
             cmd = (
                 f"{sys.executable} src/train.py experiment=multitask/ba_small/gcon "
                 f"model.net.tasks=[{task}] "
-                f"model.net.finetuning.strategy='{strat}' "
-                f"model.net.finetuning.new_tasks=[{task}] "
-                f"model.net.finetuning.path={CKPT_PATH} "
+                f"seed={args.seed} "
                 f"trainer.max_epochs={args.epochs} "
                 f"trainer.check_val_every_n_epoch={args.epochs} "
                 f"trainer.accelerator=auto "
@@ -173,6 +155,57 @@ def main():
             )
             run_command(cmd)
             val = get_latest_metric(task, log_type="train")
+            results[task]["baseline"] = val
+            print(f"---> [BASELINE]: {task.upper()} finished with result: {val}")
+            save_and_print_table(results, TASKS)
+
+    # 3. RUN FINE-TUNED (20 epochs from Foundation Model)
+    if args.mode in ["all", "finetuned"]:
+        print("\n" + "="*70)
+        print(f"STAGE 3: Fine-Tuning from Pretrained Backbone ({args.epochs} epochs, seed={args.seed})")
+        print("="*70)
+        for task in args.tasks:
+            if not args.force and results[task]["finetuned"] is not None:
+                print(f"---> [FINE-TUNED]: Skipping {task.upper()} (Already computed: {results[task]['finetuned']})")
+                continue
+            print(f"\n---> [FINE-TUNED]: Starting {task.upper()} ({args.epochs} epochs, seed={args.seed})...")
+            
+            if task == "color" and args.color_direct_eval:
+                print(f"---> [FINE-TUNED]: Evaluating COLORING directly on pretrained foundation head ({CKPT_PATH})...")
+                cmd = (
+                    f"{sys.executable} src/eval.py experiment=multitask/ba_small/gcon "
+                    f"model.net.tasks=[color] "
+                    f"ckpt_path={CKPT_PATH} "
+                    f"trainer.accelerator=auto "
+                    f"logger=csv "
+                    f"hydra/job_logging=default hydra/hydra_logging=default "
+                    f"paths.root_dir=. "
+                    f"data.num_workers=2"
+                )
+                run_command(cmd)
+                val = get_latest_metric(task, log_type="eval")
+                if val is None:
+                    val = get_latest_metric(task, log_type="train")
+            else:
+                strat = "linear_probing" if task == "color" else "finetuning"
+                cmd = (
+                    f"{sys.executable} src/train.py experiment=multitask/ba_small/gcon "
+                    f"model.net.tasks=[{task}] "
+                    f"seed={args.seed} "
+                    f"model.net.finetuning.strategy='{strat}' "
+                    f"model.net.finetuning.new_tasks=[{task}] "
+                    f"model.net.finetuning.path={CKPT_PATH} "
+                    f"trainer.max_epochs={args.epochs} "
+                    f"trainer.check_val_every_n_epoch={args.epochs} "
+                    f"trainer.accelerator=auto "
+                    f"logger=csv "
+                    f"hydra/job_logging=default hydra/hydra_logging=default "
+                    f"paths.root_dir=. "
+                    f"data.num_workers=2"
+                )
+                run_command(cmd)
+                val = get_latest_metric(task, log_type="train")
+
             results[task]["finetuned"] = val
             print(f"---> [FINE-TUNED]: {task.upper()} finished with result: {val}")
             save_and_print_table(results, TASKS)
