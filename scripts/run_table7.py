@@ -65,7 +65,7 @@ def main():
         print("="*70)
         if Path(CKPT_PATH).exists():
             # Evaluate the 3 core tasks together
-            cmd = f"{sys.executable} src/eval.py experiment=multitask/ba_small/gcon ckpt_path={CKPT_PATH} model.net.tasks=[color,mds,mis] logger=csv"
+            cmd = f"{sys.executable} src/eval.py experiment=multitask/ba_small/gcon ckpt_path={CKPT_PATH} model.net.tasks=[color,mds,mis] logger=csv hydra/job_logging=default hydra/hydra_logging=default"
             out = run_command(cmd)
             for t in ["color", "mds", "mis"]:
                 if t in args.tasks:
@@ -75,7 +75,7 @@ def main():
             
             # For remaining tasks, evaluate with appropriate head
             for t in [t for t in args.tasks if t not in ["color", "mds", "mis"]]:
-                cmd = f"{sys.executable} src/train.py experiment=multitask/ba_small/gcon model.net.tasks=[{t}] model.net.finetuning.strategy=finetuning model.net.finetuning.new_tasks=[{t}] model.net.finetuning.path={CKPT_PATH} trainer.max_epochs=0 logger=csv"
+                cmd = f"{sys.executable} src/train.py experiment=multitask/ba_small/gcon model.net.tasks=[{t}] model.net.finetuning.strategy=finetuning model.net.finetuning.new_tasks=[{t}] model.net.finetuning.path={CKPT_PATH} trainer.max_epochs=0 logger=csv hydra/job_logging=default hydra/hydra_logging=default"
                 out = run_command(cmd)
                 val = extract_metric(out, t)
                 if val is not None:
@@ -88,7 +88,7 @@ def main():
         print("="*70)
         for task in args.tasks:
             print(f"\n---> Training BASELINE: {task.upper()}")
-            cmd = f"{sys.executable} src/train.py experiment=multitask/ba_small/gcon model.net.tasks=[{task}] trainer.max_epochs={args.epochs} logger=csv"
+            cmd = f"{sys.executable} src/train.py experiment=multitask/ba_small/gcon model.net.tasks=[{task}] trainer.max_epochs={args.epochs} logger=csv hydra/job_logging=default hydra/hydra_logging=default"
             out = run_command(cmd)
             val = extract_metric(out, task)
             results[task]["baseline"] = val
@@ -108,7 +108,8 @@ def main():
                 f"model.net.finetuning.new_tasks=[{task}] "
                 f"model.net.finetuning.path={CKPT_PATH} "
                 f"trainer.max_epochs={args.epochs} "
-                f"logger=csv"
+                f"logger=csv "
+                f"hydra/job_logging=default hydra/hydra_logging=default"
             )
             out = run_command(cmd)
             val = extract_metric(out, task)
