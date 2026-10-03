@@ -101,7 +101,7 @@ def main():
     parser.add_argument("--force", action="store_true", help="Force re-run even if task is already in cached results")
     args = parser.parse_args()
 
-    results = {task: {"finetuned": None, "baseline": None, "full": None} for task in args.tasks}
+    results = {task: {"finetuned": None, "baseline": None, "full": None} for task in TASKS}
     
     # Load previously saved results if available
     if Path(RESULTS_JSON).exists():
@@ -124,11 +124,11 @@ def main():
         "mvc": 139.40,
         "color": 43.52,
     }
-    for t in args.tasks:
+    for t in TASKS:
         if results[t]["full"] is None:
             results[t]["full"] = PAPER_FULL.get(t, None)
 
-    save_and_print_table(results, args.tasks)
+    save_and_print_table(results, TASKS)
 
     # 2. RUN BASELINES FROM SCRATCH (20 epochs)
     if args.mode in ["all", "baseline"]:
@@ -145,7 +145,7 @@ def main():
             val = get_latest_metric(task, log_type="train")
             results[task]["baseline"] = val
             print(f"---> [BASELINE]: {task.upper()} finished with result: {val}")
-            save_and_print_table(results, args.tasks)
+            save_and_print_table(results, TASKS)
 
     # 3. RUN FINE-TUNED (20 epochs from Foundation Model)
     if args.mode in ["all", "finetuned"]:
@@ -176,11 +176,11 @@ def main():
             val = get_latest_metric(task, log_type="train")
             results[task]["finetuned"] = val
             print(f"---> [FINE-TUNED]: {task.upper()} finished with result: {val}")
-            save_and_print_table(results, args.tasks)
+            save_and_print_table(results, TASKS)
 
     # FINAL OUTPUT
     print("\nFINAL SUMMARY:")
-    save_and_print_table(results, args.tasks)
+    save_and_print_table(results, TASKS)
 
 if __name__ == "__main__":
     main()

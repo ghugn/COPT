@@ -474,7 +474,7 @@ class MultiCOPTModule(LightningModule):
             self.discretizer = IMLESampler(device=self.device)
 
         # MTL strategy
-        if weights is None:
+        if weights is None or len(self.tasks) == 1:
             self.weights = {task : 1.0 for task in self.tasks}
         else:
             self.weights = {task : weights[task] for task in self.tasks}
