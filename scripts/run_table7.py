@@ -7,6 +7,8 @@ from pathlib import Path
 
 # Disable wandb to prevent any interactive prompts
 os.environ["WANDB_MODE"] = "disabled"
+if "PROJECT_ROOT" not in os.environ:
+    os.environ["PROJECT_ROOT"] = str(Path(__file__).resolve().parent.parent)
 
 TASKS = ["maxcut", "maxclique", "mds", "mis", "mvc", "color"]
 TASK_SYMBOLS = {
@@ -138,7 +140,7 @@ def main():
                 print(f"---> [BASELINE]: Skipping {task.upper()} (Already computed: {results[task]['baseline']})")
                 continue
             print(f"\n---> [BASELINE]: Starting {task.upper()} ({args.epochs} epochs)...")
-            cmd = f"{sys.executable} src/train.py experiment=multitask/ba_small/gcon model.net.tasks=[{task}] trainer.max_epochs={args.epochs} logger=csv hydra/job_logging=default hydra/hydra_logging=default data.num_workers=2"
+            cmd = f"{sys.executable} src/train.py experiment=multitask/ba_small/gcon model.net.tasks=[{task}] trainer.max_epochs={args.epochs} logger=csv hydra/job_logging=default hydra/hydra_logging=default paths.root_dir=. data.num_workers=2"
             run_command(cmd)
             val = get_latest_metric(task, log_type="train")
             results[task]["baseline"] = val
@@ -165,6 +167,7 @@ def main():
                 f"trainer.max_epochs={args.epochs} "
                 f"logger=csv "
                 f"hydra/job_logging=default hydra/hydra_logging=default "
+                f"paths.root_dir=. "
                 f"data.num_workers=2"
             )
             run_command(cmd)

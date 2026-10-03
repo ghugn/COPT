@@ -14,7 +14,10 @@ def _safe_torch_load(*args, **kwargs):
     kwargs["weights_only"] = False
     return _orig_torch_load(*args, **kwargs)
 torch.load = _safe_torch_load
-import time
+import os
+from pathlib import Path
+if "PROJECT_ROOT" not in os.environ:
+    os.environ["PROJECT_ROOT"] = str(Path(__file__).resolve().parent.parent)
 
 rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 # ------------------------------------------------------------------------------------ #
