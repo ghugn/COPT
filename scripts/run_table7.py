@@ -140,7 +140,7 @@ def main():
                 print(f"---> [BASELINE]: Skipping {task.upper()} (Already computed: {results[task]['baseline']})")
                 continue
             print(f"\n---> [BASELINE]: Starting {task.upper()} ({args.epochs} epochs)...")
-            cmd = f"{sys.executable} src/train.py experiment=multitask/ba_small/gcon model.net.tasks=[{task}] trainer.max_epochs={args.epochs} logger=csv hydra/job_logging=default hydra/hydra_logging=default paths.root_dir=. data.num_workers=2"
+            cmd = f"{sys.executable} src/train.py experiment=multitask/ba_small/gcon model.net.tasks=[{task}] trainer.max_epochs={args.epochs} trainer.accelerator=auto logger=csv hydra/job_logging=default hydra/hydra_logging=default paths.root_dir=. data.num_workers=2"
             run_command(cmd)
             val = get_latest_metric(task, log_type="train")
             results[task]["baseline"] = val
@@ -165,6 +165,7 @@ def main():
                 f"model.net.finetuning.new_tasks=[{task}] "
                 f"model.net.finetuning.path={CKPT_PATH} "
                 f"trainer.max_epochs={args.epochs} "
+                f"trainer.accelerator=auto "
                 f"logger=csv "
                 f"hydra/job_logging=default hydra/hydra_logging=default "
                 f"paths.root_dir=. "
