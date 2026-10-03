@@ -10,7 +10,11 @@ try:
     from torch_scatter import scatter
 except ImportError:
     from torch_geometric.utils import scatter
-from yacs.config import CfgNode
+try:
+    from yacs.config import CfgNode
+except ImportError:
+    class CfgNode(dict):
+        pass
 from tqdm import tqdm
 
 
