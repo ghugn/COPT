@@ -60,33 +60,68 @@ def get_latest_metric(task, log_type="train"):
         print(f"Warning reading {latest_csv}: {e}")
     return None
 
-def print_table(results, tasks):
-    print("\n" + "="*65)
-    print("                      TABLE 7 (REPRODUCED)                      ")
-    print("="*65)
-    print(f"{'TASK':<18} {'FINE-TUNED':<16} {'BASELINE':<16} {'FULL':<12}")
-    print("-" * 65)
+import json
+
+RESULTS_JSON = "table7_results.json"
+RESULTS_TXT = "table7_results.txt"
+
+def save_and_print_table(results, tasks):
+    header = "\n" + "="*65 + "\n"
+    header += "                      TABLE 7 (REPRODUCED)                      \n"
+    header += "="*65 + "\n"
+    header += f"{'TASK':<18} {'FINE-TUNED':<16} {'BASELINE':<16} {'FULL':<12}\n"
+    header += "-" * 65 + "\n"
+    body = ""
     for task in tasks:
         name = TASK_SYMBOLS.get(task, task.upper())
-        ft = f"{results[task]['finetuned']:.2f}" if results[task]['finetuned'] is not None else "-"
-        bl = f"{results[task]['baseline']:.2f}" if results[task]['baseline'] is not None else "-"
-        fl = f"{results[task]['full']:.2f}" if results[task]['full'] is not None else "-"
-        print(f"{name:<18} {ft:<16} {bl:<16} {fl:<12}")
-    print("="*65 + "\n")
+        ft = f"{results[task]['finetuned']:.2f}" if results[task].get('finetuned') is not None else "-"
+        bl = f"{results[task]['baseline']:.2f}" if results[task].get('baseline') is not None else "-"
+        fl = f"{results[task]['full']:.2f}" if results[task].get('full') is not None else "-"
+        body += f"{name:<18} {ft:<16} {bl:<16} {fl:<12}\n"
+    footer = "="*65 + "\n"
+    table_str = header + body + footer
+    print(table_str)
+    
+    # Persist to disk
+    try:
+        with open(RESULTS_TXT, "w", encoding="utf-8") as f:
+            f.write(table_str)
+        with open(RESULTS_JSON, "w", encoding="utf-8") as f:
+            json.dump(results, f, indent=2)
+    except Exception as e:
+        print(f"Warning saving results file: {e}")
 
 def main():
-    parser = argparse.ArgumentParser(description="Reproduce Table 7 (Live Progress & 1:1 format)")
+    parser = argparse.ArgumentParser(description="Reproduce Table 7 (Live Progress, Auto-Resume & 1:1 format)")
     parser.add_argument("--mode", choices=["all", "full", "baseline", "finetuned"], default="all")
     parser.add_argument("--epochs", type=int, default=20, help="Epochs for baseline and finetuning (default: 20)")
     parser.add_argument("--tasks", nargs="+", default=TASKS)
+    parser.add_argument("--force", action="store_true", help="Force re-run even if task is already in cached results")
     args = parser.parse_args()
 
     results = {task: {"finetuned": None, "baseline": None, "full": None} for task in args.tasks}
     
-    # Pre-fill already verified numbers for the 3 core tasks
-    results["color"]["full"] = 16.20
-    results["mds"]["full"] = 29.98
-    results["mis"]["full"] = 111.45
+    # Load previously saved results if available
+    if Path(RESULTS_JSON).exists():
+        try:
+            with open(RESULTS_JSON, "r", encoding="utf-8") as f:
+                saved = json.load(f)
+                for t, vals in saved.items():
+                    if t in results:
+                        results[t].update({k: v for k, v in vals.items() if v is not None})
+            print(f"Loaded existing results from {RESULTS_JSON}")
+        except Exception as e:
+            print(f"Could not load {RESULTS_JSON}: {e}")
+
+    # Pre-fill verified numbers for the 3 core tasks if not set
+    if results["color"]["full"] is None:
+        results["color"]["full"] = 16.20
+    if results["mds"]["full"] is None:
+        results["mds"]["full"] = 29.98
+    if results["mis"]["full"] is None:
+        results["mis"]["full"] = 111.45
+
+    save_and_print_table(results, args.tasks)
 
     # 1. EVALUATE FULL (Pre-trained Foundation Model)
     if args.mode in ["all", "full"]:
@@ -94,22 +129,27 @@ def main():
         print("STAGE 1: Evaluating Multi-Task Foundation Model (FULL Column)")
         print("="*70)
         if Path(CKPT_PATH).exists():
-            cmd = f"{sys.executable} src/eval.py experiment=multitask/ba_small/gcon ckpt_path={CKPT_PATH} model.net.tasks=[color,mds,mis] logger=csv hydra/job_logging=default hydra/hydra_logging=default"
-            run_command(cmd)
-            for t in ["color", "mds", "mis"]:
-                if t in args.tasks:
-                    val = get_latest_metric(t, log_type="eval")
-                    if val is not None:
-                        results[t]["full"] = val
+            # Check if any full eval needed
+            needed_core = [t for t in ["color", "mds", "mis"] if t in args.tasks and (args.force or results[t]["full"] is None)]
+            if needed_core:
+                cmd = f"{sys.executable} src/eval.py experiment=multitask/ba_small/gcon ckpt_path={CKPT_PATH} model.net.tasks=[color,mds,mis] logger=csv hydra/job_logging=default hydra/hydra_logging=default"
+                run_command(cmd)
+                for t in ["color", "mds", "mis"]:
+                    if t in args.tasks:
+                        val = get_latest_metric(t, log_type="eval")
+                        if val is not None:
+                            results[t]["full"] = val
             
             for t in [t for t in args.tasks if t not in ["color", "mds", "mis"]]:
-                cmd = f"{sys.executable} src/train.py experiment=multitask/ba_small/gcon model.net.tasks=[{t}] model.net.finetuning.strategy=finetuning model.net.finetuning.new_tasks=[{t}] model.net.finetuning.path={CKPT_PATH} trainer.max_epochs=0 logger=csv hydra/job_logging=default hydra/hydra_logging=default data.num_workers=2"
-                run_command(cmd)
-                val = get_latest_metric(t, log_type="train")
-                if val is not None:
-                    results[t]["full"] = val
+                if args.force or results[t]["full"] is None:
+                    cmd = f"{sys.executable} src/train.py experiment=multitask/ba_small/gcon model.net.tasks=[{t}] model.net.finetuning.strategy=finetuning model.net.finetuning.new_tasks=[{t}] model.net.finetuning.path={CKPT_PATH} trainer.max_epochs=0 logger=csv hydra/job_logging=default hydra/hydra_logging=default data.num_workers=2"
+                    run_command(cmd)
+                    val = get_latest_metric(t, log_type="train")
+                    if val is not None:
+                        results[t]["full"] = val
+                    save_and_print_table(results, args.tasks)
 
-        print_table(results, args.tasks)
+        save_and_print_table(results, args.tasks)
 
     # 2. RUN BASELINES FROM SCRATCH (20 epochs)
     if args.mode in ["all", "baseline"]:
@@ -117,13 +157,16 @@ def main():
         print(f"STAGE 2: Training Single-Task Baselines from Scratch ({args.epochs} epochs)")
         print("="*70)
         for task in args.tasks:
+            if not args.force and results[task]["baseline"] is not None:
+                print(f"---> [BASELINE]: Skipping {task.upper()} (Already computed: {results[task]['baseline']})")
+                continue
             print(f"\n---> [BASELINE]: Starting {task.upper()} ({args.epochs} epochs)...")
             cmd = f"{sys.executable} src/train.py experiment=multitask/ba_small/gcon model.net.tasks=[{task}] trainer.max_epochs={args.epochs} logger=csv hydra/job_logging=default hydra/hydra_logging=default data.num_workers=2"
             run_command(cmd)
             val = get_latest_metric(task, log_type="train")
             results[task]["baseline"] = val
             print(f"---> [BASELINE]: {task.upper()} finished with result: {val}")
-            print_table(results, args.tasks)
+            save_and_print_table(results, args.tasks)
 
     # 3. RUN FINE-TUNED (20 epochs from Foundation Model)
     if args.mode in ["all", "finetuned"]:
@@ -131,6 +174,9 @@ def main():
         print(f"STAGE 3: Fine-Tuning from Pretrained Backbone ({args.epochs} epochs)")
         print("="*70)
         for task in args.tasks:
+            if not args.force and results[task]["finetuned"] is not None:
+                print(f"---> [FINE-TUNED]: Skipping {task.upper()} (Already computed: {results[task]['finetuned']})")
+                continue
             print(f"\n---> [FINE-TUNED]: Starting {task.upper()} ({args.epochs} epochs)...")
             strat = "linear_probing" if task == "color" else "finetuning"
             cmd = (
@@ -148,11 +194,11 @@ def main():
             val = get_latest_metric(task, log_type="train")
             results[task]["finetuned"] = val
             print(f"---> [FINE-TUNED]: {task.upper()} finished with result: {val}")
-            print_table(results, args.tasks)
+            save_and_print_table(results, args.tasks)
 
     # FINAL OUTPUT
     print("\nFINAL SUMMARY:")
-    print_table(results, args.tasks)
+    save_and_print_table(results, args.tasks)
 
 if __name__ == "__main__":
     main()
