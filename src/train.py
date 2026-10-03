@@ -13,6 +13,7 @@ def _safe_torch_load(*args, **kwargs):
 torch.load = _safe_torch_load
 from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
+from omegaconf import DictConfig
 import os
 from pathlib import Path
 if "PROJECT_ROOT" not in os.environ:
