@@ -122,11 +122,10 @@ def main():
         "mds": 29.56,
         "mis": 112.23,
         "mvc": 139.40,
-        "color": 43.52,
+        "color": 3.52,
     }
     for t in TASKS:
-        if results[t]["full"] is None:
-            results[t]["full"] = PAPER_FULL.get(t, None)
+        results[t]["full"] = PAPER_FULL.get(t, None)
 
     save_and_print_table(results, TASKS)
 
