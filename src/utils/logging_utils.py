@@ -3,8 +3,10 @@ from typing import Any, Dict
 from lightning_utilities.core.rank_zero import rank_zero_only
 from omegaconf import OmegaConf
 
-from omegaconf import DictConfig
-from pytorch_lightning import Trainer
+try:
+    from lightning.pytorch import Trainer
+except ImportError:
+    from pytorch_lightning import Trainer
 from pathlib import Path
 import shutil
 
