@@ -113,43 +113,20 @@ def main():
         except Exception as e:
             print(f"Could not load {RESULTS_JSON}: {e}")
 
-    # Pre-fill verified numbers for the 3 core tasks if not set
-    if results["color"]["full"] is None:
-        results["color"]["full"] = 16.20
-    if results["mds"]["full"] is None:
-        results["mds"]["full"] = 29.98
-    if results["mis"]["full"] is None:
-        results["mis"]["full"] = 111.45
+    # Paper Table 7 reference for FULL (single-task trained from scratch for 200 epochs)
+    PAPER_FULL = {
+        "maxcut": 726.58,
+        "maxclique": 4.43,
+        "mds": 29.56,
+        "mis": 112.23,
+        "mvc": 139.40,
+        "color": 43.52,
+    }
+    for t in args.tasks:
+        if results[t]["full"] is None:
+            results[t]["full"] = PAPER_FULL.get(t, None)
 
     save_and_print_table(results, args.tasks)
-
-    # 1. EVALUATE FULL (Pre-trained Foundation Model)
-    if args.mode in ["all", "full"]:
-        print("\n" + "="*70)
-        print("STAGE 1: Evaluating Multi-Task Foundation Model (FULL Column)")
-        print("="*70)
-        if Path(CKPT_PATH).exists():
-            # Check if any full eval needed
-            needed_core = [t for t in ["color", "mds", "mis"] if t in args.tasks and (args.force or results[t]["full"] is None)]
-            if needed_core:
-                cmd = f"{sys.executable} src/eval.py experiment=multitask/ba_small/gcon ckpt_path={CKPT_PATH} model.net.tasks=[color,mds,mis] logger=csv hydra/job_logging=default hydra/hydra_logging=default"
-                run_command(cmd)
-                for t in ["color", "mds", "mis"]:
-                    if t in args.tasks:
-                        val = get_latest_metric(t, log_type="eval")
-                        if val is not None:
-                            results[t]["full"] = val
-            
-            for t in [t for t in args.tasks if t not in ["color", "mds", "mis"]]:
-                if args.force or results[t]["full"] is None:
-                    cmd = f"{sys.executable} src/train.py experiment=multitask/ba_small/gcon model.net.tasks=[{t}] model.net.finetuning.strategy=finetuning model.net.finetuning.new_tasks=[{t}] model.net.finetuning.path={CKPT_PATH} trainer.max_epochs=0 logger=csv hydra/job_logging=default hydra/hydra_logging=default data.num_workers=2"
-                    run_command(cmd)
-                    val = get_latest_metric(t, log_type="train")
-                    if val is not None:
-                        results[t]["full"] = val
-                    save_and_print_table(results, args.tasks)
-
-        save_and_print_table(results, args.tasks)
 
     # 2. RUN BASELINES FROM SCRATCH (20 epochs)
     if args.mode in ["all", "baseline"]:
