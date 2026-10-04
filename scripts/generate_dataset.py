@@ -80,13 +80,14 @@ def main():
             batch_size=32,
             splits="5-fold",
             labels=False,
-            graph_stats=['degree', 'cluster_coefficient', 'triangle_count'],
+            graph_stats=['degree', 'eccentricity', 'cluster_coefficient', 'triangle_count'],
             num_workers=args.num_workers if use_mp else 0,
             pin_memory=False,
             multiprocessing=use_mp,
             num_samples=args.num_samples,
-            n=[200, 300],
-            m=4,
+            n_min=200,
+            n_max=300,
+            num_edges=4,
         )
     else:
         raise ValueError(f"Unsupported format: {args.format}")
