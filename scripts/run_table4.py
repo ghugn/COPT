@@ -163,7 +163,7 @@ def ensure_mis_checkpoint(seed, max_epochs=200, val_every=10, num_workers=2):
         f"trainer.max_epochs={max_epochs} "
         f"callbacks.early_stopping.patience=40 "
         f"trainer.check_val_every_n_epoch={val_every} "
-        f"paths.root_dir=. data.num_workers={num_workers}"
+        f"paths.root_dir=. data.num_workers={num_workers} trainer.accelerator=auto trainer.devices=1"
     )
     ret = run_command(cmd)
     if ret != 0:
@@ -203,7 +203,7 @@ def ensure_mis_cdata_checkpoint(seed, max_epochs=200, val_every=10, num_workers=
         f"trainer.max_epochs={max_epochs} "
         f"callbacks.early_stopping.patience=40 "
         f"trainer.check_val_every_n_epoch={val_every} "
-        f"paths.root_dir=. data.num_workers={num_workers}"
+        f"paths.root_dir=. data.num_workers={num_workers} trainer.accelerator=auto trainer.devices=1"
     )
     ret = run_command(cmd)
     if ret != 0:
@@ -316,7 +316,7 @@ def run_row(row_id, seed, args, results_data):
             f"trainer.max_epochs={max_epochs_baseline} "
             f"callbacks.early_stopping.patience=100 "
             f"trainer.check_val_every_n_epoch={val_every} "
-            f"paths.root_dir=. data.num_workers={num_workers}"
+            f"paths.root_dir=. data.num_workers={num_workers} trainer.accelerator=auto trainer.devices=1"
         )
         task = "maxclique"
         log_type = "train"
@@ -329,7 +329,7 @@ def run_row(row_id, seed, args, results_data):
             f"trainer.max_epochs={max_epochs_baseline} "
             f"callbacks.early_stopping.patience=100 "
             f"trainer.check_val_every_n_epoch={val_every} "
-            f"paths.root_dir=. data.num_workers={num_workers}"
+            f"paths.root_dir=. data.num_workers={num_workers} trainer.accelerator=auto trainer.devices=1"
         )
         task = "maxclique"
         log_type = "train"
@@ -340,7 +340,7 @@ def run_row(row_id, seed, args, results_data):
             f"python src/eval.py experiment=maxclique/rb_small/gcon "
             f"seed={seed} "
             f"ckpt_path=null "
-            f"paths.root_dir=. data.num_workers={num_workers}"
+            f"paths.root_dir=. data.num_workers={num_workers} trainer.accelerator=auto trainer.devices=1"
         )
         task = "maxclique"
         log_type = "eval"
@@ -356,7 +356,7 @@ def run_row(row_id, seed, args, results_data):
             f"trainer.max_epochs={max_epochs_transfer} "
             f"callbacks.early_stopping.patience=50 "
             f"trainer.check_val_every_n_epoch={val_every} "
-            f"paths.root_dir=. data.num_workers={num_workers}"
+            f"paths.root_dir=. data.num_workers={num_workers} trainer.accelerator=auto trainer.devices=1"
         )
         task = "maxclique"
         log_type = "train"
@@ -372,7 +372,7 @@ def run_row(row_id, seed, args, results_data):
             f"trainer.max_epochs={max_epochs_transfer} "
             f"callbacks.early_stopping.patience=50 "
             f"trainer.check_val_every_n_epoch={val_every} "
-            f"paths.root_dir=. data.num_workers={num_workers}"
+            f"paths.root_dir=. data.num_workers={num_workers} trainer.accelerator=auto trainer.devices=1"
         )
         task = "maxclique"
         log_type = "train"
@@ -388,7 +388,7 @@ def run_row(row_id, seed, args, results_data):
             f"trainer.max_epochs={max_epochs_transfer} "
             f"callbacks.early_stopping.patience=50 "
             f"trainer.check_val_every_n_epoch={val_every} "
-            f"paths.root_dir=. data.num_workers={num_workers}"
+            f"paths.root_dir=. data.num_workers={num_workers} trainer.accelerator=auto trainer.devices=1"
         )
         task = "maxclique"
         log_type = "train"
@@ -404,7 +404,7 @@ def run_row(row_id, seed, args, results_data):
             f"trainer.max_epochs={max_epochs_transfer} "
             f"callbacks.early_stopping.patience=50 "
             f"trainer.check_val_every_n_epoch={val_every} "
-            f"paths.root_dir=. data.num_workers={num_workers}"
+            f"paths.root_dir=. data.num_workers={num_workers} trainer.accelerator=auto trainer.devices=1"
         )
         task = "maxclique"
         log_type = "train"
@@ -420,7 +420,7 @@ def run_row(row_id, seed, args, results_data):
             f"trainer.max_epochs={max_epochs_transfer} "
             f"callbacks.early_stopping.patience=50 "
             f"trainer.check_val_every_n_epoch={val_every} "
-            f"paths.root_dir=. data.num_workers={num_workers}"
+            f"paths.root_dir=. data.num_workers={num_workers} trainer.accelerator=auto trainer.devices=1"
         )
         task = "maxclique"
         log_type = "train"
@@ -436,7 +436,7 @@ def run_row(row_id, seed, args, results_data):
             f"trainer.max_epochs={max_epochs_transfer} "
             f"callbacks.early_stopping.patience=50 "
             f"trainer.check_val_every_n_epoch={val_every} "
-            f"paths.root_dir=. data.num_workers={num_workers}"
+            f"paths.root_dir=. data.num_workers={num_workers} trainer.accelerator=auto trainer.devices=1"
         )
         task = "maxclique"
         log_type = "train"
@@ -452,7 +452,7 @@ def run_row(row_id, seed, args, results_data):
             f"trainer.max_epochs={max_epochs_transfer} "
             f"callbacks.early_stopping.patience=50 "
             f"trainer.check_val_every_n_epoch={val_every} "
-            f"paths.root_dir=. data.num_workers={num_workers}"
+            f"paths.root_dir=. data.num_workers={num_workers} trainer.accelerator=auto trainer.devices=1"
         )
         task = "mis"  # Equivalent reduction uses MIS metric over complement
         log_type = "train"
@@ -468,7 +468,7 @@ def run_row(row_id, seed, args, results_data):
             f"trainer.max_epochs={max_epochs_transfer} "
             f"callbacks.early_stopping.patience=50 "
             f"trainer.check_val_every_n_epoch={val_every} "
-            f"paths.root_dir=. data.num_workers={num_workers}"
+            f"paths.root_dir=. data.num_workers={num_workers} trainer.accelerator=auto trainer.devices=1"
         )
         task = "mis"  # Equivalent reduction uses MIS metric over complement
         log_type = "train"
