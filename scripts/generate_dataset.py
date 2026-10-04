@@ -17,6 +17,8 @@ if "PROJECT_ROOT" not in os.environ:
 
 PROJECT_ROOT = Path(os.environ["PROJECT_ROOT"])
 os.chdir(PROJECT_ROOT)
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 def main():
     parser = argparse.ArgumentParser(description="Generate synthetic graph datasets (e.g. RB-small) and prepare for training/download")

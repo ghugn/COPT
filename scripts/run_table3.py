@@ -22,6 +22,8 @@ if "PROJECT_ROOT" not in os.environ:
     os.environ["PROJECT_ROOT"] = str(Path(__file__).resolve().parent.parent)
 
 PROJECT_ROOT = Path(os.environ["PROJECT_ROOT"])
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 RESULTS_JSON = "table3_results.json"
 RESULTS_TXT = "table3_results.txt"
