@@ -199,7 +199,7 @@ def main():
     parser = argparse.ArgumentParser(description="Reproduce Table 3: MIS <-> MVC Pairwise Transferability on RB-small across seeds")
     parser.add_argument("--epochs_baseline", type=int, default=100, help="Epochs for training baseline models (default: 100)")
     parser.add_argument("--epochs_ft", type=int, default=20, help="Epochs for fine-tuning / transfer (default: 20)")
-    parser.add_argument("--val_every", type=int, default=5, help="Check validation every N epochs (default: 5)")
+    parser.add_argument("--val_every", type=int, default=10, help="Check validation every N epochs (default: 10)")
     parser.add_argument("--seeds", type=int, nargs="+", default=None, help="List of random seeds (default: 12345 42 2024)")
     parser.add_argument("--seed", type=int, default=None, help="Single seed override (e.g. --seed 12345)")
     parser.add_argument("--num_seeds", type=int, default=None, help="Number of seeds to run from defaults (e.g. --num_seeds 3)")
