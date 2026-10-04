@@ -81,13 +81,20 @@ def create_concise_report():
     r_n2_desc.font.size = Pt(11)
     r_n2_desc.font.color.rgb = CHARCOAL
 
+    CURRENT_DIR = Path(__file__).resolve().parent
+    PROJECT_ROOT = CURRENT_DIR.parent.parent
     paths = [
-        Path("d:/Downloads/Lab_resource/Task5-MHoang/COPT-MT-main/Bao_Cao_Y_Nghia_Benchmark_COPT.docx"),
-        Path("d:/Downloads/Lab_resource/Task5-MHoang/COPT-MT-main/Giai_thich_Bench.docx"),
+        CURRENT_DIR / "Bao_Cao_Y_Nghia_Benchmark_COPT.docx",
+        CURRENT_DIR / "Giai_thich_Bench.docx",
+        PROJECT_ROOT / "Bao_Cao_Y_Nghia_Benchmark_COPT.docx",
+        PROJECT_ROOT / "Giai_thich_Bench.docx",
     ]
     for p in paths:
-        doc.save(p)
-        print(f"Saved: {p}")
+        try:
+            doc.save(p)
+            print(f"Saved: {p}")
+        except Exception as e:
+            print(f"Could not save {p}: {e}")
 
 if __name__ == "__main__":
     create_concise_report()

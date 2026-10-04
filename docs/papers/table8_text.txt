@@ -1,0 +1,147 @@
+=== PAGE 15 ===
+Can Computational Reducibility Lead to Transferable Models for Graph Combinatorial Optimization?
+B. Experimental Setting
+Datasets.We conduct our experiments on the same synthetic datasets used in Wenkel et al. (2025), which are commonly
+used in the field of neural graph combinatorial optimization. In all experiments, we use datasets of size 6000 with 200-300
+nodes (small) and 800-1200 nodes (large). In Section 4, we use graphs generated from the RB model. For RB graphs, we
+can specify the number of cliques (n) and the number of nodes per cliques (k). We use n∈[20,25] andk∈[5,12] for
+RB-small andn∈[40,55] andk= 20 for RB-large. We then use Barab´asi–Albert (BA) graphs in Section 5. For BA graphs,
+we can specify how many edges are attached from each new node, which we set to4for both BA-small and BA-large.
+Backbone architecture.We use a GCON backbone based on Wenkel et al. (2025) with the specific configuration detailed
+in Table 8 for every experiment, except learning rate scheduling which varies depending on pretraining or fine-tuning. Total
+number of parameters depend on the size of the head used, but the GCON backbone always has 39.2K parameters.
+Table 8.GCON Backbone and Training Hyperparameters
+Parameter Value
+Architecture Details
+Number of GCON Layers 16
+Hidden Dimension (dh) 64
+Channels (Filters) [0], [1], [2], [4], [0,1], [1,2], [2,4]
+Aggregation Sum
+Dropout Rate 0.3
+Backbone Activation GELU
+Pre-MP / Post-MP Layers 1 / 1
+Node Encoder Stats Degree, Cluster Coeff., Triangles
+Optimization & Training
+Optimizer AdamW (η= 10 −3,w d = 0)
+Learning Rate Scheduler Cosine with Warmup (50 epochs)
+Batch Size 256 (small) or 128 (large)
+Loss Strategy Weighted Sum (Task weight= 1.0)
+Decoders.The candidate sets are constructed by first ranking all vertices in descending order of their model-predicted
+scores. For each problem type, the algorithm generatesK distinct candidate sets (seeds) in parallel to find the best possible
+solution for that specific graph. In the MaxClique and MIS decoders, thek-th candidate set is initialized with thek-th ranked
+node, and the algorithm then greedily attempts to add subsequent nodes in the ranked list only if they respect the problem
+constraint, such as forming a clique or an independent set. For the MDS and MVC, thek-th candidate set is constructed
+by ignoring the topk−1 ranked nodes (by setting them to−∞) and then greedily selecting the highest-ranked available
+nodes until the required coverage constraint is satisfied. MaxCut simply picks nodes with a score higher than 0.5 to be in the
+first set and the rest in the second and counts the number of cuts created by this partition, while coloring simply counts the
+violations (adjacent nodes of the same color).
+C. Multi-Task Learning vs. Unified-Task Reductions
+Table 9.Average number of nodes and edges for the original BA-small graph where we train on solving MDS, and the equivalent graphs
+for other tasks obtained by applying reductions to the original graphs. For the transformed graphs, we denote the × change in the
+“blow-up” in the nodes and edges of the resulting graph.
+REDUCTION# NODES×MDSSIZE# EDGES×MDSSIZE
+MDS (BASE) 250.3±28.9 – 985.0±115.8 –
+MIS 1239.0±146.8 4.95 2964.0±352.3 3.01
+MVC 1239.0±146.8 4.95 2964.0±352.3 3.01
+MAXCLIQUE30873.7±7148.0 123.37 91870.3±21357.4 93.27
+A related but distinct set of approaches in neural CO instead focus on generalized formulations of CO problems in the form
+ofsatisfiability problems(SAT) or their optimization counterpartsMax-SAT. This line of work emerges from the Cook-Levin
+15
+=== PAGE 16 ===
+Can Computational Reducibility Lead to Transferable Models for Graph Combinatorial Optimization?
+Table 10.Comparison of our MTL framework with unified-MDS-reduction-based approaches, where we train a GCON model to solve
+MDS on BA-small graphs, and then “transform” the graphs corresponding to MIS/MVC/MaxClique via constructing the true reductions
+over the graph. We test three variants of the pretrained MDS model: 0-shot, frozen backbone (F-BB), and full fine-tuning (FT). * denotes
+the original MDS pretraining result, which is trained for 100 epochs as opposed to constraining to 20 epochs for other tasks.
+METHODMDS↓MVC↓MIS↑MAXCLIQUE↑
+(MDS RED.) RANDOM120.43±25.3 190.11±36.9 59.87±40.1 1.61±1.04
+(MDS RED.) BASE(20EPOCHS) 31.37±0.62* 165.21±0.96 80.99±6.42 2.98±0.12
+(MDS RED.) 0-SHOT31.37±0.62* 148.21±2.53 102.78±2.53 2.46±0.44
+(MDS RED.) F-BB - 144.59±1.35 106.25±1.35 2.27±0.14
+(MDS RED.) FT - 142.79±1.37 106.45±0.92 2.82±0.01
+(MTL) FT (W/ GRAPHSTATS) 32.03±0.66139.31±0.17 111.96±0.02 4.34±0.01
+(MTL) FT (W/OGRAPHSTATS) 36.57±1.09 140.14±0.81 111.39±0.39 4.31±0.01
+theorem (Cook, 1971; Karp, 1972), which shows that any problem in NP can be reduced to a boolean satisfiability problem
+(SAT) in polynomial time.
+Zeng et al. (2023) pretrain GNNs on bipartite graph representations of synthetic Max-SAT instances in a supervised manner
+and solve MaxCut, MIS and MDS instances by reducing them to Max-SAT graphs. Guo et al. (2025) follow a similar
+recipe but focus on SAT formulations of corresponding decision problems, and pretrain in an unsupervised manner via
+contrastive learning. These works acknowledge the value of generalization for neural CO and provide partial solutions, but
+do not directly address the relationship between reducibility and transferability; instead, they aim to whollycircumventtask
+transferability itself by directly learning in the general SAT/Max-SAT space, to which all our CO problems of interest can
+be polynomially reduced.
+These approaches, however, give rise to different limitations on transferability overgraphdistributions, rather than over
+tasks. Specifically, the approaches above require applying the true reduction over the graph of interest, similar to the MIS↔
+MC reduction (Sec. 4.2) where we demonstrate that finding the maximum clique ofG is equivalent to finding the MIS of
+the complement ¯G. The graph reductions between MIS, MVC and MaxClique, however, lead to relativelymildstructural
+changes, as the node set V is maintained. As discussed in Sec.4, even such mild changes in structure lead to tangible
+limitations on transferability in constrained fine-tuning settings.
+The reductions involved to map an, e.g., MaxClique graph to an equivalent MDS or Max-SAT graph, on the other hand, may
+require “chaining” multiple structure-altering reductions to arrive at the MDS/Max-SAT representations, which in turn leads
+to extreme blow-ups in the number of nodes and edges considered. For example, reducing MaxCut on a graph to its SAT
+counterpart, in practice, requires chaining three reductions: MaxCut→MIS→3-SAT→SAT.
+This resulting blow-up, despite being polynomially bounded, leads to a large distribution shift in the graph distributions
+across which the models are trained and transferred to, as well as substantially larger graphs in general, limiting the ability of
+GNN-based frameworks to learn the appropriate graph representations effectively. To demonstrate the potential shortcomings
+of these methods compared to our multi-task learning (MTL) framework, we hereby present an analogous study where we
+compare our MTL framework with a “unified-task” learning framework akin to the works discussed above.
+Unified-task method.We pretrain a GCON model to solve MDS on BA-small graphs, and evaluate the transferability on
+the resulting model on thereducedversions of the BA-small graphs for MIS, MVC and MaxClique problems, respectively.
+The reducibility relationships are defined as
+MDS←MVC↔MIS↔MaxClique
+where each arrow indicates whether a known reduction exists in the specified direction. We choose MDS as our “base” task
+as all other tasks can be reduced to MDS, whereas no established direct reduction from MDS to the other tasks exists to our
+knowledge without reducing it to a more general CO framing (e.g. Max-SAT). In addition to the MVC↔ MIS and MIS↔
+MaxClique reductions we establish in Sec.4, we introduce the following reduction (Sipser, 1996):
+The MVC onG is thus equivalent to the MDS onG′. The chaining of reductions, in the case of MaxClique→ MDS, is then
+16
+=== PAGE 17 ===
+Can Computational Reducibility Lead to Transferable Models for Graph Combinatorial Optimization?
+Algorithm 1MDS←MVC
+Require:Undirected graphG:= (V,E)
+G′ := (V′,E′)←G
+Remove all nodes with no incident edges fromG′
+for(i,j)∈Edo
+V′←V ′∪{k}{For every original edge(i,j), add a new “gadget” nodektoV ′}
+E′←E′∪{(i,k),(j,k)}{Connect the new nodekto both endpoints of the original edge}
+end for
+returnG′
+as follows:
+1. Convert the original graphG MaxClique to its complement to define the equivalent MIS graphG MIS =G MVC.
+2. Apply the reduction denoted in Algorithm 1 to obtain the MDS graphG MDS.
+3. Solve the MDS problem onG MDS.
+4. Invert the solution set to account for the MVC↔ MIS reduction (which does not transform the graph but inverts the
+node assignments). The resulting set (and thus its cardinality) is equivalent toG MaxClique.
+We follow this recipe to generate reduced versions of our BA-small dataset for MIS, MVC and MaxClique respectively. The
+node and edge counts of each reduced dataset is presented in Table 9: The first graph reduction from MDS to MIS/MVC leads
+to graphs with five times the number of nodes and three times the number of edges. The chained reduction to MaxClique
+leads to an average graph size of about 31,000 nodes, a 122-fold increase over the relatively small (200-300-node) original
+graphs.
+We then evaluate our MDS pretrained model on each reduced dataset in three transfer settings: zero-shot transfer, fine-tuning
+the linear prediction head while keeping the backbone frozen, and fine-tuning the whole model. In line with our MTL
+experiments, we restrict fine-tuning to 20 epochs for a fair comparison.
+Results.We present the results of our study in Table 10. Our MTL method consistently outperforms all variants of the
+unified-MDS-task model, with the performance gap growing as we chain more reductions and increase the distribution shift.
+For MVC and MIS, unified-task pretraining is still useful despite falling short of MTL performance, with noticeable gains
+even in the zero-shot setting compared to the baseline of training 20 epochs from scratch, with additional improvements
+through fine-tuning.
+However, in the MaxClique case with a∼100× blow-up in the node and edge counts, unified-task pretraining breaks down:
+Even in the full fine-tuning setting, the attained maximum clique is lower than the baseline, indicating negative transfer. The
+gap between fine-tuned unified-task and MTL methods also increase from 2.5% and 4.9% for MVC and MIS, respectively,
+to35.0%for MaxClique.
+Analysis.These results suggest a direct inverse correlation between increased distribution shift as a result of chained
+reductions, and reduced transferability. In addition to the distribution shift itself, the induced large graphs also limit the
+effectiveness of fine-tuning by introducing practical and computational bottlenecks that reduce the quality of learned graph
+representations. The practical bottlenecks are straightforward to analyze: Significantly larger (and denser in cases where the
+MIS↔ MaxClique reduction, which returns dense complements of sparse graphs, is considered) graphs render efficient
+training of GNNs expensive, require significantly more memory and compute, and provide noisier gradients due to being
+limited to small batch sizes. Computing graph statistics or positional encodings (PE) for graph datasets with sizes in the
+order of tens of thousands also render their usage as informative node features cumbersome at best, and non-viable at worst.
+We emphasize that we have considered BA-small graphs precisely for these reasons: Despite the small size of the original
+graphs, the resulting MaxClique dataset is comparatively so large that when training on a single NVIDIA L40S GPU, we
+can fit only four graphs into memory at a time and full fine-tuning (20 epochs) takes about two days, whereas training the
+MDS model on the original BA-small dataset only takes several hours.
+Learning non-local relationships on large graphs are also more prone to run into under-reaching and over-squashing (Alon
+& Yahav, 2021), well-known challenges in graph representation learning that limit the expressivity of the learned graph
+representations. Without auxiliary structures like virtual nodes, skip connections or graph Transformer layers, we conjecture
+17

@@ -1,0 +1,178 @@
+
+=== PAGE 1 ===
+
+=== PAGE 2 ===
+with efficient transfer learning mechanisms suitable for in-
+
+=== PAGE 3 ===
+Figure 1.(Left) Reduction between tasks for pairwise transferability section: MIS/MVC are complements, but MaxClique is based on an
+
+=== PAGE 4 ===
+Table 1.Energy-based loss functions for CO problems considered.
+Table extended from Sanokowski et al. (2024).
+Table 2.Performance comparison of GCON with other baselines
+GCN SSL-GNN 221.56±0.0515.33±0.0417.67±0.20
+GIN SSL-GNN 221.63±0.2315.28±0.1417.50±0.04
+GATV2 SSL-GNN220.76±2.2615.56±0.0917.58±0.07
+
+=== PAGE 5 ===
+played in Table 1. When training our network, we optimize
+3.4. Ablation Study on GCON Layer
+MVC, MaxClique and MIS. As shown in Table 2, when
+trained models for our transferability experiments in Sec. 4.
+a MaxClique size of 16.92 (compared to 15.87 in Wenkel
+Clique Hamiltonian losses in Table 1); the alternative loss
+only attained 15.5 average MIS size as opposed to 18.04
+4. Pairwise Transferability
+We begin this section with a brief discussion of known
+4.1. MIS↔MVC
+
+=== PAGE 6 ===
+sults denoted in Table 3. We test several settings, the most
+Table 3.MIS ↔ MVC transferability onRB-small. BASELINE
+4.2. MIS/MVC↔MaxClique
+Our experiments in 4.1 (MIS↔ MVC) implicitly use the
+In Table 4, we compare our fine-tuned models with the base-
+
+=== PAGE 7 ===
+Table 4.Overview of MIS → MaxClique transferability experi-
+6G∥ ¯GFROZEN— FALSE 15.98±0.12
+10G∥ ¯GFROZEN— TRUE 15.52±0.08
+local-message-passing GNNs trained from scratch (Table 2)
+(as in the MIS↔ MVC case), these experiments show that
+as the losses are equivalent over the complement (Table 1).
+5. Multi-Task Transferability
+models for graph CO problems. For every experiment in this
+section, we pretrain for 200 epochs on a Barab ´asi–Albert
+
+=== PAGE 8 ===
+5.1. Leave-One-Out Transfer
+Table 5.Leave-one-out fine-tuning in low-resource regime onBA-
+↑MAXCLIQUE4.31±0.014.32±0.01
+↓MDS35.57±2.4136.15±1.87
+↓COLOR61.92±36.1124.19±9.08
+this experiment five times for all tasks on BA small graphs
+in Table 5. We find that for every task but MDS, the model
+5.2. Fine-Tuning on a Graph CO Backbone
+In this section, we propose a pretraining set of three CO
+200 epochs. From our findings in in Sec. 5.1, we assert
+
+=== PAGE 9 ===
+Table 6.MDS (↓) trained together with all but one task onBA-
+33.3641.34 41.4034.6845.29
+Table 7.Fine-tuning on MDS-MIS-Coloring pretrained backbones
+↑MAXCLIQUE4.32±0.014.31±0.004.43±0.02
+show in Table 6, suggesting to leave MaxCut and MVC
+MaxClique, MaxCut, MVC to be fine-tuned. In Table 7 we
+
+=== PAGE 10 ===
+Sustainable Development (GTSD), pp. 329–334. IEEE,
+lems, 2024. URL https://arxiv.org/abs/
+2024. Springer Nature Switzerland.
+Computational Harmonic Analysis, 70:101635, 2024.
+Computing Machinery. ISBN 9781450374644. doi:
+9780262046305.
+Curran Associates Inc. ISBN 9781510860964.
+eralist combinatorial optimization agent learning, 2024.
+2025(1):4362941, 2025. doi: https://doi.org/10.1155/ijbc/
+URLhttps://arxiv.org/abs/2505.16952.
+
+=== PAGE 11 ===
+problems, 2025. URL https://openreview.net/
+pp. 448–456, Lille, France, 07–09 Jul 2015. PMLR.
+ioffe15.html.
+ume 40, pp. 85–103, 01 1972. ISBN 978-3-540-68274-5.
+Medicine, 188:109790, 2025. ISSN 0010-4825. doi:
+https://doi.org/10.1016/j.compbiomed.2025.109790.
+science/article/pii/S0010482525001404.
+926, 2021. doi: 10.1109/ICAC3N53548.2021.9725474.
+Comb. Optim., 28(1):58–81, July 2014. ISSN 1382-
+6905. doi: 10.1007/s10878-014-9734-0. URL https:
+Optimization, 13:100116, 2025. ISSN 2192-4406.
+doi: https://doi.org/10.1016/j.ejco.2025.100116.
+for combinatorial optimization, 2025. URL https:
+routing problems, 2024. URL https://arxiv.org/
+abs/2404.11677.
+problem zero-shot generalization, 2024. URL https:
+Frontiers in Physics, V olume 2 - 2014, 2014. ISSN
+2296-424X. doi: 10.3389/fphy.2014.00005. URL
+physics/articles/10.3389/fphy.2014.
+00005.
+nal of Mathematics, 17:533–540, 1965. doi: 10.4153/
+
+=== PAGE 12 ===
+1724, 2014. doi: 10.1109/CVPR.2014.222.
+Conference on Machine Learning, ICML’24. JMLR.org,
+2024.
+043131, Nov 2022b. doi: 10.1103/PhysRevResearch.4.
+1103/PhysRevResearch.4.043131.
+tion, 2025. URL https://arxiv.org/abs/2305.
+29 Nov 2025. URL https://proceedings.mlr.
+2014, pp. 818–833, Cham, 2014. Springer International
+
+=== PAGE 13 ===
+arXiv:2305.17010, 2023.
+with mixture-of-experts, 2024. URL https://arxiv.
+org/abs/2405.01029.
+optimization problems, 2025. URL https://arxiv.
+org/abs/2505.06290.
+
+=== PAGE 14 ===
+
+=== PAGE 15 ===
+B. Experimental Setting
+Datasets.We conduct our experiments on the same synthetic datasets used in Wenkel et al. (2025), which are commonly
+used in the field of neural graph combinatorial optimization. In all experiments, we use datasets of size 6000 with 200-300
+nodes (small) and 800-1200 nodes (large). In Section 4, we use graphs generated from the RB model. For RB graphs, we
+RB-small andn∈[40,55] andk= 20 for RB-large. We then use Barab´asi–Albert (BA) graphs in Section 5. For BA graphs,
+in Table 8 for every experiment, except learning rate scheduling which varies depending on pretraining or fine-tuning. Total
+Table 8.GCON Backbone and Training Hyperparameters
+Table 9.Average number of nodes and edges for the original BA-small graph where we train on solving MDS, and the equivalent graphs
+MDS (BASE) 250.3±28.9 – 985.0±115.8 –
+MIS 1239.0±146.8 4.95 2964.0±352.3 3.01
+MVC 1239.0±146.8 4.95 2964.0±352.3 3.01
+
+=== PAGE 16 ===
+Table 10.Comparison of our MTL framework with unified-MDS-reduction-based approaches, where we train a GCON model to solve
+(MDS RED.) RANDOM120.43±25.3 190.11±36.9 59.87±40.1 1.61±1.04
+(MDS RED.) BASE(20EPOCHS) 31.37±0.62* 165.21±0.96 80.99±6.42 2.98±0.12
+(MDS RED.) F-BB - 144.59±1.35 106.25±1.35 2.27±0.14
+(MTL) FT (W/ GRAPHSTATS) 32.03±0.66139.31±0.17 111.96±0.02 4.34±0.01
+(MTL) FT (W/OGRAPHSTATS) 36.57±1.09 140.14±0.81 111.39±0.39 4.31±0.01
+MC reduction (Sec. 4.2) where we demonstrate that finding the maximum clique ofG is equivalent to finding the MIS of
+
+=== PAGE 17 ===
+4. Invert the solution set to account for the MVC↔ MIS reduction (which does not transform the graph but inverts the
+node and edge counts of each reduced dataset is presented in Table 9: The first graph reduction from MDS to MIS/MVC leads
+experiments, we restrict fine-tuning to 20 epochs for a fair comparison.
+Results.We present the results of our study in Table 10. Our MTL method consistently outperforms all variants of the
+gap between fine-tuned unified-task and MTL methods also increase from 2.5% and 4.9% for MVC and MIS, respectively,
+to35.0%for MaxClique.
+
+=== PAGE 18 ===
+Table 11.Fine-tuning on MDS-MIS-Coloring pretrained backbones for 20 epochs (BA-largedataset, 3 runs average)
+↑MAXCUT2935.82±0.632926.39±2.462946.01±6.00
+↑MAXCLIQUE4.31±0.034.32±0.014.41±0.02
+↑MIS 453.51±0.17452.59±0.07454.77±0.13
+↓MVC 550.55±0.36554.53±1.22548.86±0.35
+↓COLORING31.40±5.2953.48±4.5310.61±2.95
+Table 12.Size Extrapolation Comparison on BA-large and BA-small datasets (3 runs average)
+↑MAXCUT2935.8±0.62936.0±0.1+0.01% 2926.4±2.5722.8±1.0722.0±1.4-0.11% 716.9±1.5
+↑MAXCLIQUE4.31±0.034.30±0.02-0.24% 4.32±0.014.32±0.014.34±0.01+0.49% 4.31±0.00
+↓MVC 550.5±0.4550.9±0.3+0.06% 554.5±1.2139.7±0.3139.8±0.2+0.09% 141.4±0.2
+↓COLORING31.4±5.353.8±12.5+71.26% 53.5±4.517.3±2.028.3±8.8+63.52% 49.0±21.8
+D. Additional Experiments
+Multi-task learning on large graphs.We test our pretraining-finetuning framework developed in Section 5 on BA-large
+graphs. We see that the results obtained and the observations made in Section 5 also hold for larger graphs.
+different sizes never seen in pretraining. Using the same set-up as Section 5, we pretrain on BA-small graphs and finetune
+Timing experiments.We record the required time for inference at test time once we have pretrained our model as done
+Table 13.Inference Time Performance on NVIDIA L40S GPU (seconds)
+MIS 65.11 22.78
+We also provide below the inference times for Table 2 over the test set (500 RB-small graphs, NVIDIA Tesla V100). Note
+
+=== PAGE 19 ===
+Table 14.Inference times of Table 2 over the RB-small test set (500 graphs, NVIDIA Tesla V100).
+
+=== PAGE 20 ===
+Table 15.Comparison of our pretrained (RB small) and a randomly initialized model on 0-shot inference on DIMACS instances for MIS.
+C125.9 32 25 34

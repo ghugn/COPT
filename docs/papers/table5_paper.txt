@@ -1,0 +1,93 @@
+Can Computational Reducibility Lead to Transferable Models for Graph Combinatorial Optimization?
+(BA)-small graph dataset and fine-tune on the same dataset
+for only 20 epochs. The model consists of a GCON back-
+bone where we attach a simple MLP heads for every tasks,
+and the output is fed to a task specific unsupervised loss
+function (see Sec. 3.3 and Appendix A). Fine-tuning is done
+by attaching a new task head with the corresponding loss
+function and training for 20 epochs with either a frozen or
+an unfrozen backbone. The tasks considered here are Max-
+Cut, MaxClique, MDS, MIS, MVC and K-coloring with
+K= 10 . Tables display the size of the subsetV′ learned for
+all tasks butK-coloring, where we simply count the number
+of violations.
+5.1. Leave-One-Out Transfer
+We begin by asking if the successful transfers observed in
+Sec. 4 also apply in the multi-task learning setting. Suppose
+we want to fine-tune taskTn on a backbone pretrained on
+tasksT1,···,T n−1. To get efficient transfer, does it suffice
+for there to exist one taskTi in the pretraining set such that
+Tn is reducible toTi? To study this question, we look at MIS
+and MVC when they are fine-tuned on the other task (MIS
+from MVC and MVC from MIS), when they are fine-tuned
+on the rest of the tasks (MaxCut, MaxClique, 10-Coloring
+and MDS), and when they are fine-tuned on all tasks (rest +
+other). We compare the results to training MIS and MVC
+individually for 20 epochs, and show the results for a frozen
+and an unfrozen backbone in Figure 2.
+Unsurprisingly, we find that when we transfer from MVC to
+MIS and vice-versa, we quickly converge to a good solution
+(within 4-6 epochs), whereas training from scratch takes
+at least 15 epochs to match the fine-tuning performance.
+However, if we do not freeze the backbone, we find that the
+behavior of the MIS learning curve when pretrained on all
+other tasksincludingMVC behaves similarly to whenonly
+pretrained on MVC, whereas when we remove MVC from
+the pretraining set, the curves behave closer to the training
+from scratch. Moreover, when the backbone is frozen, the
+model is not able to transfer to MIS using the other tasks
+if MVC is not present in the pretraining set, giving poor
+results, while if MVC is present, it actually converges faster
+than training from scratch. As expected, the inverse relation
+also holds true when transfering to MVC while keeping or
+removing MIS in the pretraining set. These results suggest
+that it is sufficient to have one j∈{1,···,n−1} such
+that there is an efficient reduction from Tn toTj in order
+to observe rapid transfer from the pretraining set toTn that
+beats the baseline in a low-resource regime, even with a
+frozen backbone (thus requiring to train only a fraction of
+the total number of parameters).
+Now we want set up a leave-one-out transfer framework
+to study if fine-tuning on a multi-task learning model pre-
+trained on the five other tasks help the remaining task to
+Figure 2.Transfer performance on MVC and MIS. We compare
+training from scratch against frozen and unfrozen fine-tuning on
+theothertask (MVC on MIS and MIS on MVC), therestof tasks
+(MCut, MClique, MDS,K-coloring), andalltasks (rest + other)
+forBA-smallgraphs.
+Table 5.Leave-one-out fine-tuning in low-resource regime onBA-
+smallgraphs (20 epochs, unfrozen backbone, 5 runs average)
+TASKFROMSCRATCHFINE-TUNED
+↑MAXCUT716.81±3.00722.40±1.17
+↑MAXCLIQUE4.31±0.014.32±0.01
+↓MDS35.57±2.4136.15±1.87
+↑MIS 111.33±0.20111.56±0.10
+↓MVC 141.30±0.27140.04±0.33
+↓COLOR61.92±36.1124.19±9.08
+learn a good solution faster than from scratch. We repeat
+this experiment five times for all tasks on BA small graphs
+in low-resources regime (20 epochs), and display the results
+in Table 5. We find that for every task but MDS, the model
+attains better performance at 20 epochs when it is fine-tuned
+on the other tasks than from scratch, which provides a strong
+evidence of transfer between graph CO problems. However,
+the benefits of fine-tuning varies between tasks: it is most
+beneficial for MaxCut andK-coloring to be fine-tuned on
+other CO problems, whereas MaxClique and MDS show
+little to no benefit. Therefore if our goal is to rapidly obtain
+good solutions to CO problems by fine-tuning tasks on a
+pretrained backbone compared to from scratch, our results
+suggest that MaxCut andK-coloring are good candidates
+to be fine-tuned.
+5.2. Fine-Tuning on a Graph CO Backbone
+In this section, we propose a pretraining set of three CO
+problems and leave the remaining three tasks to be fine-
+tuned for 20 epochs and compare performance to single
+task learning from scratch for 20 epochs and for the full
+200 epochs. From our findings in in Sec. 5.1, we assert
+that having one closely related task in the pretraining set
+is sufficient for good fine-tuning performance. Since we
+want to manage our resources efficiently, we want to avoid
+having similar tasks in the pretraining set when only one
+is sufficient to learn the others by fine-tuning. Therefore,
+8

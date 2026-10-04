@@ -1,0 +1,94 @@
+Can Computational Reducibility Lead to Transferable Models for Graph Combinatorial Optimization?
+Table 6.MDS (↓) trained together with all but one task onBA-
+smallgraphs for 200 epochs (5 runs average)
+MAXCUTMAXCLIQUEMIS MVC COLOR
+33.3641.34 41.4034.6845.29
+Table 7.Fine-tuning on MDS-MIS-Coloring pretrained backbones
+for 20 epochs (BA-smalldataset, 3 runs average)
+TASKFINE-TUNEDBASELINEFULL
+↑MAXCUT722.77±1.00716.90±1.55726.58±0.51
+↑MAXCLIQUE4.32±0.014.31±0.004.43±0.02
+↓MDS 29.65±0.0933.93±1.1529.56±0.22
+↑MIS 111.94±0.06111.33±0.26112.23±0.06
+↓MVC 139.70±0.31141.43±0.23139.40±0.20
+↓COLORING17.29±1.9749.04±21.843.52±1.52
+results from Sec. 4 suggest including only one of MIS, MVC
+and MaxClique in the pretraining set (preferably MIS or
+MVC), leaving one spot for MDS,K-coloring or MaxCut
+in the fine-tuning only set. Since MDS does not show any
+gains when fine-tuned on other tasks, unlike MaxCut and
+K-coloring, we choose to include it in the pretraining set.
+Moreover, we observe that when pretraining the all-but-
+one multi-task models, MDS performance is best when
+MaxCut and MVC are not pretrained alongside it, as we
+show in Table 6, suggesting to leave MaxCut and MVC
+out of the pretraining set. This implies by our previous
+remark that we will have MIS in pretraining and MaxClique
+in fine-tuning-only. We then delegate K-coloring to the
+pretraining set, which is also sensible since it is the most
+different from the other tasks, being the only one not linearly
+reducible to 0-1 programming as per Filar et al. (2019) (also
+see Sec. 2). In fact, we want to maximize task diversity
+in the pretraining set, so that the network has access to a
+wide range of information when fine-tuning. Therefore,
+we select MDS, MIS,K-coloring for pretraining and leave
+MaxClique, MaxCut, MVC to be fine-tuned. In Table 7 we
+show the results of fine-tuning all tasks on our backbone,
+which is unfrozen (except for fine-tuningK-coloring), and
+baseline results from training single tasks from scratch for
+20 epochs (BASELINE) and 200 epochs (FULL).
+We see that leveraging known polynomial reductions and
+interactions between CO tasks allows to carefully select
+a backbone of three tasks, to which we can attach simple
+task-specific MLP heads and fine-tune to get results that are
+on par with the fully trained (200 epochs) single task mod-
+els for most tasks and that beat the low compute resources
+(20 epochs) singe task models for all tasks. These results
+suggest that using reductions and interactions between tasks
+as a guide allows to select an efficient and transferable back-
+bone, which becomes crucial as we increase the number of
+CO tasks. Therefore, we believe our methodology estab-
+lishes an important step to building a foundational model
+for combinatorial optimization problems on graphs.
+6. Conclusion & Future Work
+In this work, we have established a conceptual relation
+between computational reducibility – a topic traditionally
+associated with theoretical computer science, and learned
+transferability – an increasingly prominent area of machine
+learning in general, and deep learning in particular. We
+demonstrate that established knowledge of reducibility be-
+tween problems can help identify and inform pretraining
+and transfer learning targets, although this relationship is not
+trivial, and further work remains to be done to fully under-
+stand the potential interaction between these notions. After
+initially exploring pairwise task transferability, we turned
+our attention to multi-task learning, which would be crucial
+for the formation of universal models (e.g., implemented
+via foundation models). We show that, indeed, this is a
+promising new direction for establishing theory-informed
+foundation models for graph CO, in which one may find
+a sufficient suite of landmark tasks that are sufficient for
+allowing efficient (if not ready-made) transfer of pretrained
+models to a wide family of significant tasks of interest.
+Acknowledgements and Disclosure of Funding
+This work was partially funded by Bourse en intelligence
+artificielle des ´Etudes sup´erieures et postdoctorales (ESP)
+2023-2024 [Semih Cant¨urk]; the Fin-ML CREATE graduate
+studies scholarship for PhD, the J.A. DeS `eve scholarship
+for PhD and Guy Wolf’s research funds [Frederik Wenkel];
+NSF OIA 2242769 [Michael Perlmutter]; Canada CIFAR
+AI Chair, IV ADO (Institut de valorisation des donn ´ees)
+grant PRF-2019-3583139727, FRQNT (Fonds de recherche
+du Qu ´ebec - Nature et technologies) grant 299376 and
+NSERC Discovery grant 03267 [Guy Wolf]; NSF DMS
+grant 2327211 [Michael Perlmutter and Guy Wolf]. This
+research was also enabled in part by compute resources pro-
+vided by Mila (mila.quebec). The content provided here is
+solely the responsibility of the authors and does not neces-
+sarily represent the official views of the funding agencies.
+Impact Statement
+This paper presents work whose goal is to advance the field
+of Machine Learning. There are many potential societal
+consequences of our work, none which we feel must be
+specifically highlighted here.
+9

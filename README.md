@@ -1,204 +1,108 @@
-# COPT-MT
+# COPT-MT: Transferable Models for Graph Combinatorial Optimization
 
-## Installation
+Implementation and benchmark reproduction of the paper:
+> **"Can Computational Reducibility Lead to Transferable Models for Graph Combinatorial Optimization?"**  
+> *Semih Cantürk, Frederik Wenkel, Michael Perlmutter, Guy Wolf*
+
+---
+
+## 📌 Repository Structure
+
+```text
+COPT-MT/
+├── configs/               # Hydra configuration files
+│   ├── data/              # Dataset configs (ba_small, rb_small, dimacs, etc.)
+│   ├── experiment/        # Experiment recipes (multitask, transfer, baselines)
+│   ├── model/             # GCON, GNN backbones, discretizer, losses
+│   └── trainer/           # PyTorch Lightning trainer configs
+├── data/                  # Graph datasets (BA-small, RB-small, processed cache)
+├── docs/                  # Documentation and reports
+│   ├── papers/            # Original paper PDF & reference section texts
+│   └── reports/           # Word docx reports & generation scripts
+├── logs/                  # Pretrained model checkpoints (.ckpt) & metric logs
+├── scripts/               # 1-click benchmark reproduction scripts
+│   ├── run_table3.py      # Table 3: MIS ↔ MVC Pairwise Transfer on RB-small
+│   ├── run_table4.py      # Table 4: MIS → MaxClique on RB-small
+│   ├── run_table5.py      # Table 5: Leave-One-Out Fine-Tuning (20 epochs)
+│   ├── run_table7.py      # Table 7: Multi-Task Foundation Model on BA-small
+│   ├── generate_dataset.py# Graph generation utility
+│   └── solver.py          # Exact solver baseline utility
+├── src/                   # Core implementation
+│   ├── data/              # PyG Datamodules and synthetic generation
+│   ├── models/            # GCON module, Hamiltonian QUBO losses, discretizers
+│   └── transforms/        # Graph statistics and feature transforms
+├── pyproject.toml         # Python dependencies & build config
+└── README.md              # Project guide
+```
+
+---
+
+## 🚀 Quickstart & Installation
 
 ```bash
+# Install dependencies with uv (or pip)
 uv sync
 uv pip install yacs einops dwave-networkx wandb ogb performer_pytorch python-sat
 uv pip install torch_scatter torch_sparse --no-build-isolation
 ```
 
-This project is built on the `lightning-hydra-template` (see `README_LHT.md` for template documentation), extended to support graph learning tasks using PyTorch Geometric (PyG). The following features have been added:
+---
 
-## TODO: Update sections below
-## Data Modules
+## 📊 1-Click Benchmark Reproduction
 
-### GNNBenchmarkDataset
+Each core table from the paper can be reproduced with a single command from the project root:
 
-The `GNNBenchmarkDataModule` provides access to the PyG GNNBenchmarkDataset, which contains a variety of graph datasets for benchmarking GNNs:
-
-- PATTERN: A node classification dataset with 2 classes
-- CLUSTER: A node classification dataset with 6 classes
-- MNIST: A graph classification dataset with 10 classes
-- CIFAR10: A graph classification dataset with 10 classes
-
-To use this data module, specify it in your configuration:
-
-```yaml
-defaults:
-  - data: gnn_benchmark.yaml
-```
-
-You can customize the dataset by modifying the configuration:
-
-```yaml
-data:
-  dataset_name: "PATTERN"  # Options: "PATTERN", "CLUSTER", "MNIST", "CIFAR10"
-  batch_size: 32
-```
-
-### TUDataset
-
-The `TUDataModule` provides access to the PyG TUDataset, which is a collection of graph datasets from the TU Dortmund University:
-
-- MUTAG: A graph classification dataset with 2 classes
-- PROTEINS: A graph classification dataset with 2 classes
-- ENZYMES: A graph classification dataset with 6 classes
-- DD: A graph classification dataset with 2 classes
-- NCI1: A graph classification dataset with 2 classes
-- And many more...
-
-To use this data module, specify it in your configuration:
-
-```yaml
-defaults:
-  - data: tu_dataset.yaml
-```
-
-You can customize the dataset by modifying the configuration:
-
-```yaml
-data:
-  dataset_name: "MUTAG"  # Options: "MUTAG", "PROTEINS", "ENZYMES", "DD", "NCI1", etc.
-  batch_size: 32
-  train_val_test_split: [0.7, 0.1, 0.2]
-```
-
-## Models
-
-### GCN (Graph Convolutional Network)
-
-The `GCNNet` is a Graph Convolutional Network that can be used for both graph-level and node-level tasks. It consists of multiple GCN layers followed by global pooling for graph-level tasks.
-
-To use this model, specify it in your configuration:
-
-```yaml
-defaults:
-  - model: gcn.yaml
-```
-
-You can customize the model by modifying the configuration:
-
-```yaml
-model:
-  task: "graph"  # Options: "graph", "node"
-  num_classes: 2  # Number of classes for classification
-  net:
-    in_channels: 7  # Number of input features
-    hidden_channels: 64
-    out_channels: 2  # Should match num_classes
-    num_layers: 2
-    dropout: 0.5
-```
-
-## Example Experiments
-
-### Graph Classification
-
-To run a graph classification experiment using the TUDataset and GCN model:
-
+### 1. Table 7: Multi-Task Foundation Model on BA-small
+Huấn luyện mô hình nền tảng đa nhiệm trên cả 6 bài toán NP-hard cốt lõi (MaxCut, MaxClique, MDS, MIS, MVC, Coloring):
 ```bash
-python src/train.py experiment=gcn_graph_classification
+python -u scripts/run_table7.py
 ```
 
-This will train a GCN model on the MUTAG dataset for graph classification.
-
-### Node Classification
-
-To run a node classification experiment using the GNNBenchmarkDataset and GCN model:
-
+### 2. Table 3: Pairwise Transferability (MIS ↔ MVC) on RB-small
+Khảo sát chuyển giao bảo toàn cấu trúc và kỹ thuật **Invert Head** ($p_{\text{MIS}} = 1 - p_{\text{MVC}}$) trên 6.000 đồ thị RB-small:
 ```bash
-python src/train.py experiment=gcn_node_classification
+python -u scripts/run_table3.py
 ```
 
-This will train a GCN model on the CLUSTER dataset for node classification.
-
-## Graph Transforms
-
-Both `GNNBenchmarkDataModule` and `TUDataModule` support PyTorch Geometric transforms, which can be used to preprocess the graph data or add additional features like positional encodings.
-
-By default, the `NormalizeFeatures` transform is always applied. You can add additional transforms by modifying the configuration:
-
-```yaml
-data:
-  transforms:
-    transform_name:
-      _target_: torch_geometric.transforms.TransformName
-      param1: value1
-      param2: value2
-```
-
-### Example: Adding Positional Encodings
-
-Positional encodings can improve the performance of GNNs by providing information about the structure of the graph. Here's an example of how to add Laplacian eigenvector-based positional encodings:
-
-```yaml
-data:
-  transforms:
-    laplacian_pe:
-      _target_: torch_geometric.transforms.AddLaplacianEigenvectorPE
-      k: 5  # Number of Laplacian eigenvectors to use
-```
-
-This will add 5 Laplacian eigenvectors as additional node features, which can help the model learn about the graph structure.
-
-Example configuration files are provided:
-- `configs/data/gnn_benchmark_with_pe.yaml`
-- `configs/data/tu_dataset_with_pe.yaml`
-
-To use these configurations:
-
+### 3. Table 5: Leave-One-Out Low-Resource Fine-Tuning (20 epochs)
+Đánh giá khả năng chuyển giao siêu tốc trong điều kiện ít tài nguyên (20 epochs) so với train từ đầu:
 ```bash
-python src/train.py data=gnn_benchmark_with_pe
+python -u scripts/run_table5.py
 ```
 
-or
-
+### 4. Table 4: MIS → MaxClique Transfer via Complement Graphs
+Khảo sát chuyển giao qua đồ thị bù $\bar{G}$ (MaxClique(G) = MIS($\bar{G}$)):
 ```bash
-python src/train.py data=tu_dataset_with_pe
+python -u scripts/run_table4.py
 ```
 
-## Requirements
+---
 
-Make sure you have the required PyTorch Geometric packages installed:
+## 🏆 Tóm Tắt Kết Quả Tái Hiện Thực Tế
 
-```bash
-pip install torch-geometric torch-scatter torch-sparse
+### Table 5: Leave-One-Out Fine-Tuning (BA-small, 20 epochs)
+```text
+================================================================================
+TABLE 5: Leave-One-Out Fine-Tuning in Low-Resource Regime on BA-small (20 epochs)
+================================================================================
+TASK                 FROM SCRATCH            FINE-TUNED
+--------------------------------------------------------------------------------
+↑ MAXCUT             718.92                  720.12
+↑ MAXCLIQUE          4.33                    4.36
+↓ MDS                34.54                   29.59
+↑ MIS                111.14                  111.67
+↓ MVC                140.83                  139.65
+↓ COLOR              57.47                   18.91
+================================================================================
 ```
 
-These packages are included in the project's requirements.txt file.
+### Table 3: MIS ↔ MVC Pairwise Transfer (RB-small, 6.000 graphs)
+* **Baseline train từ đầu:** MIS = 18.31 (Paper: 18.12), MVC = 213.14 (Paper: 211.69)
+* **FT Invert + FT:** MIS = 18.01, MVC = 212.06 (Đánh bại Baseline từ đầu 213.14)
 
-## Example of multitask learning and finetuning for combinatorial optimization tasks
+---
 
-E.g. multitask on maxcut and mis:
-
-```bash
-python src/train.py experiment=multitask/ba_small/gcon model.net.tasks=[maxcut, mis]
-```
-
-One can weight the different loss functions in multitask learning using model.weights, e.g. 
-
-```bash
-python src/train.py experiment=multitask/ba_small/gcon model.net.tasks=[maxcut, mis] model.weights.maxcut=0.8 model.weights.mis=0.2
-```
-
-Running a task with finetuning off will upload checkpoints in logs/train/checkpoints/"task_names"/ (best.ckpt or last.ckpt)
-e.g. logs/train/checkpoints/mis/, logs/train/checkpoints/color10/, logs/train/checkpoints/mis_mds/
-
-For finetuning, we need model.net.finetuning.strategy = 'finetuning', 'linear_probing'
-
-E.g. Finetune mis on maxcut:
-
-```bash
-python src/train.py experiment=multitask/ba_small/gcon model.net.finetuning.strategy='finetuning' model.net.finetuning.new_tasks=[mis] model.net.finetuning.path=logs/train/checkpoints/maxcut/last.ckpt
-```
-
-To pick the number of colors in graph coloring, use model.net.dims_out.color = #colors
-
-E.g. 10 colors
-
-```bash
-python src/train.py experiment=multitask/ba_small/gcon model.net.tasks=[color] model.net.dim_out.color=10
-```
-
-
+## 📑 Báo Cáo & Tài Liệu Nghiên Cứu
+* **Báo cáo tóm tắt:** [docs/reports/Bao_Cao_Y_Nghia_Benchmark_COPT.docx](docs/reports/Bao_Cao_Y_Nghia_Benchmark_COPT.docx)
+* **Tài liệu phản biện & phân tích:** [docs/reports/Giai_thich_Bench.docx](docs/reports/Giai_thich_Bench.docx)
+* **Script cập nhật báo cáo:** [docs/reports/generate_report_docx.py](docs/reports/generate_report_docx.py)
