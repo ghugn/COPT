@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 import subprocess
 import argparse
 import shutil
@@ -43,13 +44,17 @@ def run_command(cmd):
     res = subprocess.run(cmd, shell=True)
     return res.returncode
 
-def get_latest_metric(task, log_type="train"):
+def get_latest_metric(task, min_mtime=None, log_type="train"):
     base_dir = PROJECT_ROOT / "logs" / log_type / "runs"
     if not base_dir.exists():
         return None
     csv_files = list(base_dir.glob("**/metrics.csv"))
     if not csv_files:
         return None
+    if min_mtime is not None:
+        csv_files = [p for p in csv_files if p.stat().st_mtime >= min_mtime - 1.0]
+        if not csv_files:
+            return None
     # Sort newest first
     csv_files.sort(key=lambda p: p.stat().st_mtime, reverse=True)
     latest_csv = csv_files[0]
@@ -72,14 +77,15 @@ def get_latest_metric(task, log_type="train"):
         print(f"Warning reading {latest_csv}: {e}")
     return None
 
-def find_latest_checkpoint():
+def find_latest_checkpoint(min_mtime=None):
     runs_dir = PROJECT_ROOT / "logs" / "train" / "runs"
     if not runs_dir.exists():
         return None
     ckpt_files = list(runs_dir.glob("**/checkpoints/*.ckpt"))
     if not ckpt_files:
         return None
-    # Filter for non-empty checkpoints, sort newest first
+    if min_mtime is not None:
+        ckpt_files = [p for p in ckpt_files if p.stat().st_mtime >= min_mtime - 1.0]
     valid = [p for p in ckpt_files if p.stat().st_size > 1000]
     if not valid:
         return None
@@ -111,7 +117,7 @@ def save_and_print_table(results):
 
 def main():
     parser = argparse.ArgumentParser(description="Reproduce Table 3: MIS <-> MVC Pairwise Transferability on RB-small")
-    parser.add_argument("--epochs_baseline", type=int, default=50, help="Epochs for training baseline models (default: 50)")
+    parser.add_argument("--epochs_baseline", type=int, default=100, help="Epochs for training baseline models (default: 100)")
     parser.add_argument("--epochs_ft", type=int, default=20, help="Epochs for fine-tuning / transfer (default: 20)")
     parser.add_argument("--val_every", type=int, default=5, help="Check validation every N epochs (default: 5)")
     parser.add_argument("--seed", type=int, default=12345, help="Random seed (default: 12345)")
@@ -131,7 +137,8 @@ def main():
         "FT_INVERT": {"mis": None, "mvc": None},
     }
 
-    if Path(RESULTS_JSON).exists():
+    # Only load cached results if --force is NOT specified
+    if not args.force and Path(RESULTS_JSON).exists():
         try:
             with open(RESULTS_JSON, "r", encoding="utf-8") as f:
                 saved = json.load(f)
@@ -167,19 +174,22 @@ def main():
                     f"trainer.accelerator=auto "
                     f"logger=csv "
                     f"hydra/job_logging=default hydra/hydra_logging=default "
-                    f"paths.root_dir=. data.num_workers={args.num_workers} data.multiprocessing=True{extra_cmd}"
+                    f"paths.root_dir=. data.num_workers={args.num_workers}{extra_cmd}"
                 )
-                run_command(cmd)
-                val = get_latest_metric("mis", log_type="train")
-                results["BASELINE"]["mis"] = val
-                print(f"---> [BASELINE MIS] Finished: {val}")
+                t_start = time.time()
+                ret = run_command(cmd)
+                if ret == 0:
+                    val = get_latest_metric("mis", min_mtime=t_start, log_type="train")
+                    results["BASELINE"]["mis"] = val
+                    print(f"---> [BASELINE MIS] Finished: {val}")
 
-                # Save checkpoint as pretrained MIS model
-                latest_ckpt = find_latest_checkpoint()
-                if latest_ckpt and latest_ckpt.exists():
-                    shutil.copyfile(latest_ckpt, mis_ckpt)
-                    print(f"---> Saved MIS checkpoint to {mis_ckpt}")
-                save_and_print_table(results)
+                    latest_ckpt = find_latest_checkpoint(min_mtime=t_start)
+                    if latest_ckpt and latest_ckpt.exists():
+                        shutil.copyfile(latest_ckpt, mis_ckpt)
+                        print(f"---> Saved MIS checkpoint to {mis_ckpt}")
+                    save_and_print_table(results)
+                else:
+                    print(f"---> [ERROR]: Baseline MIS failed with exit code {ret}!")
             else:
                 print(f"---> [BASELINE MIS]: Already computed ({results['BASELINE']['mis']})")
 
@@ -195,19 +205,22 @@ def main():
                     f"trainer.accelerator=auto "
                     f"logger=csv "
                     f"hydra/job_logging=default hydra/hydra_logging=default "
-                    f"paths.root_dir=. data.num_workers={args.num_workers} data.multiprocessing=True{extra_cmd}"
+                    f"paths.root_dir=. data.num_workers={args.num_workers}{extra_cmd}"
                 )
-                run_command(cmd)
-                val = get_latest_metric("mvc", log_type="train")
-                results["BASELINE"]["mvc"] = val
-                print(f"---> [BASELINE MVC] Finished: {val}")
+                t_start = time.time()
+                ret = run_command(cmd)
+                if ret == 0:
+                    val = get_latest_metric("mvc", min_mtime=t_start, log_type="train")
+                    results["BASELINE"]["mvc"] = val
+                    print(f"---> [BASELINE MVC] Finished: {val}")
 
-                # Save checkpoint as pretrained MVC model
-                latest_ckpt = find_latest_checkpoint()
-                if latest_ckpt and latest_ckpt.exists():
-                    shutil.copyfile(latest_ckpt, mvc_ckpt)
-                    print(f"---> Saved MVC checkpoint to {mvc_ckpt}")
-                save_and_print_table(results)
+                    latest_ckpt = find_latest_checkpoint(min_mtime=t_start)
+                    if latest_ckpt and latest_ckpt.exists():
+                        shutil.copyfile(latest_ckpt, mvc_ckpt)
+                        print(f"---> Saved MVC checkpoint to {mvc_ckpt}")
+                    save_and_print_table(results)
+                else:
+                    print(f"---> [ERROR]: Baseline MVC failed with exit code {ret}!")
             else:
                 print(f"---> [BASELINE MVC]: Already computed ({results['BASELINE']['mvc']})")
 
@@ -243,12 +256,14 @@ def main():
                         f"trainer.accelerator=auto "
                         f"logger=csv "
                         f"hydra/job_logging=default hydra/hydra_logging=default "
-                        f"paths.root_dir=. data.num_workers={args.num_workers} data.multiprocessing=True{extra_cmd}"
+                        f"paths.root_dir=. data.num_workers={args.num_workers}{extra_cmd}"
                     )
-                    run_command(cmd)
-                    val = get_latest_metric("mis", log_type="train")
-                    results["FREEZE_RESET"]["mis"] = val
-                    save_and_print_table(results)
+                    t_start = time.time()
+                    ret = run_command(cmd)
+                    if ret == 0:
+                        val = get_latest_metric("mis", min_mtime=t_start, log_type="train")
+                        results["FREEZE_RESET"]["mis"] = val
+                        save_and_print_table(results)
 
                 # Setting 2: FREEZE (INVERT + FT)
                 if args.force or results["FREEZE_INVERT"]["mis"] is None:
@@ -265,12 +280,14 @@ def main():
                         f"trainer.accelerator=auto "
                         f"logger=csv "
                         f"hydra/job_logging=default hydra/hydra_logging=default "
-                        f"paths.root_dir=. data.num_workers={args.num_workers} data.multiprocessing=True{extra_cmd}"
+                        f"paths.root_dir=. data.num_workers={args.num_workers}{extra_cmd}"
                     )
-                    run_command(cmd)
-                    val = get_latest_metric("mis", log_type="train")
-                    results["FREEZE_INVERT"]["mis"] = val
-                    save_and_print_table(results)
+                    t_start = time.time()
+                    ret = run_command(cmd)
+                    if ret == 0:
+                        val = get_latest_metric("mis", min_mtime=t_start, log_type="train")
+                        results["FREEZE_INVERT"]["mis"] = val
+                        save_and_print_table(results)
 
                 # Setting 3: FT (INVERT + FT)
                 if args.force or results["FT_INVERT"]["mis"] is None:
@@ -287,12 +304,14 @@ def main():
                         f"trainer.accelerator=auto "
                         f"logger=csv "
                         f"hydra/job_logging=default hydra/hydra_logging=default "
-                        f"paths.root_dir=. data.num_workers={args.num_workers} data.multiprocessing=True{extra_cmd}"
+                        f"paths.root_dir=. data.num_workers={args.num_workers}{extra_cmd}"
                     )
-                    run_command(cmd)
-                    val = get_latest_metric("mis", log_type="train")
-                    results["FT_INVERT"]["mis"] = val
-                    save_and_print_table(results)
+                    t_start = time.time()
+                    ret = run_command(cmd)
+                    if ret == 0:
+                        val = get_latest_metric("mis", min_mtime=t_start, log_type="train")
+                        results["FT_INVERT"]["mis"] = val
+                        save_and_print_table(results)
 
         # ---------------------------------------------------------------------
         # DIRECTION 2: Pretrained MIS -> Evaluated on MVC (Column MVC ↓)
@@ -318,12 +337,14 @@ def main():
                         f"trainer.accelerator=auto "
                         f"logger=csv "
                         f"hydra/job_logging=default hydra/hydra_logging=default "
-                        f"paths.root_dir=. data.num_workers={args.num_workers} data.multiprocessing=True{extra_cmd}"
+                        f"paths.root_dir=. data.num_workers={args.num_workers}{extra_cmd}"
                     )
-                    run_command(cmd)
-                    val = get_latest_metric("mvc", log_type="train")
-                    results["FREEZE_RESET"]["mvc"] = val
-                    save_and_print_table(results)
+                    t_start = time.time()
+                    ret = run_command(cmd)
+                    if ret == 0:
+                        val = get_latest_metric("mvc", min_mtime=t_start, log_type="train")
+                        results["FREEZE_RESET"]["mvc"] = val
+                        save_and_print_table(results)
 
                 # Setting 2: FREEZE (INVERT + FT)
                 if args.force or results["FREEZE_INVERT"]["mvc"] is None:
@@ -340,12 +361,14 @@ def main():
                         f"trainer.accelerator=auto "
                         f"logger=csv "
                         f"hydra/job_logging=default hydra/hydra_logging=default "
-                        f"paths.root_dir=. data.num_workers={args.num_workers} data.multiprocessing=True{extra_cmd}"
+                        f"paths.root_dir=. data.num_workers={args.num_workers}{extra_cmd}"
                     )
-                    run_command(cmd)
-                    val = get_latest_metric("mvc", log_type="train")
-                    results["FREEZE_INVERT"]["mvc"] = val
-                    save_and_print_table(results)
+                    t_start = time.time()
+                    ret = run_command(cmd)
+                    if ret == 0:
+                        val = get_latest_metric("mvc", min_mtime=t_start, log_type="train")
+                        results["FREEZE_INVERT"]["mvc"] = val
+                        save_and_print_table(results)
 
                 # Setting 3: FT (INVERT + FT)
                 if args.force or results["FT_INVERT"]["mvc"] is None:
@@ -362,12 +385,14 @@ def main():
                         f"trainer.accelerator=auto "
                         f"logger=csv "
                         f"hydra/job_logging=default hydra/hydra_logging=default "
-                        f"paths.root_dir=. data.num_workers={args.num_workers} data.multiprocessing=True{extra_cmd}"
+                        f"paths.root_dir=. data.num_workers={args.num_workers}{extra_cmd}"
                     )
-                    run_command(cmd)
-                    val = get_latest_metric("mvc", log_type="train")
-                    results["FT_INVERT"]["mvc"] = val
-                    save_and_print_table(results)
+                    t_start = time.time()
+                    ret = run_command(cmd)
+                    if ret == 0:
+                        val = get_latest_metric("mvc", min_mtime=t_start, log_type="train")
+                        results["FT_INVERT"]["mvc"] = val
+                        save_and_print_table(results)
 
     print("\nFINAL SUMMARY:")
     save_and_print_table(results)
