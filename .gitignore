@@ -17,6 +17,8 @@ ENV/
 /data/
 !configs/data/
 !src/data/
+!data/ba/small/processed/**
+!data/rb/small/processed/**
 
 
 # Compressed archives
