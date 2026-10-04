@@ -18,6 +18,7 @@ except Exception:
 
 # Disable wandb to prevent interactive prompts
 os.environ["WANDB_MODE"] = "disabled"
+os.environ["PYTHONUNBUFFERED"] = "1"
 if "PROJECT_ROOT" not in os.environ:
     os.environ["PROJECT_ROOT"] = str(Path(__file__).resolve().parent.parent)
 
