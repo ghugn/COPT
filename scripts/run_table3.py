@@ -120,7 +120,9 @@ def main():
     parser.add_argument("--force", action="store_true", help="Force re-run even if result already cached")
     parser.add_argument("--mis_ckpt", type=str, default=None, help="Path to pretrained MIS checkpoint")
     parser.add_argument("--mvc_ckpt", type=str, default=None, help="Path to pretrained MVC checkpoint")
-    args = parser.parse_args()
+    parser.add_argument("--num_workers", type=int, default=4, help="Data loader & generator workers (default: 4)")
+    args, extra_args = parser.parse_known_args()
+    extra_cmd = " " + " ".join(extra_args) if extra_args else ""
 
     results = {
         "BASELINE": {"mis": None, "mvc": None},
@@ -165,7 +167,7 @@ def main():
                     f"trainer.accelerator=auto "
                     f"logger=csv "
                     f"hydra/job_logging=default hydra/hydra_logging=default "
-                    f"paths.root_dir=. data.num_workers=2"
+                    f"paths.root_dir=. data.num_workers={args.num_workers} data.multiprocessing=True{extra_cmd}"
                 )
                 run_command(cmd)
                 val = get_latest_metric("mis", log_type="train")
@@ -193,7 +195,7 @@ def main():
                     f"trainer.accelerator=auto "
                     f"logger=csv "
                     f"hydra/job_logging=default hydra/hydra_logging=default "
-                    f"paths.root_dir=. data.num_workers=2"
+                    f"paths.root_dir=. data.num_workers={args.num_workers} data.multiprocessing=True{extra_cmd}"
                 )
                 run_command(cmd)
                 val = get_latest_metric("mvc", log_type="train")
@@ -241,7 +243,7 @@ def main():
                         f"trainer.accelerator=auto "
                         f"logger=csv "
                         f"hydra/job_logging=default hydra/hydra_logging=default "
-                        f"paths.root_dir=. data.num_workers=2"
+                        f"paths.root_dir=. data.num_workers={args.num_workers} data.multiprocessing=True{extra_cmd}"
                     )
                     run_command(cmd)
                     val = get_latest_metric("mis", log_type="train")
@@ -263,7 +265,7 @@ def main():
                         f"trainer.accelerator=auto "
                         f"logger=csv "
                         f"hydra/job_logging=default hydra/hydra_logging=default "
-                        f"paths.root_dir=. data.num_workers=2"
+                        f"paths.root_dir=. data.num_workers={args.num_workers} data.multiprocessing=True{extra_cmd}"
                     )
                     run_command(cmd)
                     val = get_latest_metric("mis", log_type="train")
@@ -285,7 +287,7 @@ def main():
                         f"trainer.accelerator=auto "
                         f"logger=csv "
                         f"hydra/job_logging=default hydra/hydra_logging=default "
-                        f"paths.root_dir=. data.num_workers=2"
+                        f"paths.root_dir=. data.num_workers={args.num_workers} data.multiprocessing=True{extra_cmd}"
                     )
                     run_command(cmd)
                     val = get_latest_metric("mis", log_type="train")
@@ -316,7 +318,7 @@ def main():
                         f"trainer.accelerator=auto "
                         f"logger=csv "
                         f"hydra/job_logging=default hydra/hydra_logging=default "
-                        f"paths.root_dir=. data.num_workers=2"
+                        f"paths.root_dir=. data.num_workers={args.num_workers} data.multiprocessing=True{extra_cmd}"
                     )
                     run_command(cmd)
                     val = get_latest_metric("mvc", log_type="train")
@@ -338,7 +340,7 @@ def main():
                         f"trainer.accelerator=auto "
                         f"logger=csv "
                         f"hydra/job_logging=default hydra/hydra_logging=default "
-                        f"paths.root_dir=. data.num_workers=2"
+                        f"paths.root_dir=. data.num_workers={args.num_workers} data.multiprocessing=True{extra_cmd}"
                     )
                     run_command(cmd)
                     val = get_latest_metric("mvc", log_type="train")
@@ -360,7 +362,7 @@ def main():
                         f"trainer.accelerator=auto "
                         f"logger=csv "
                         f"hydra/job_logging=default hydra/hydra_logging=default "
-                        f"paths.root_dir=. data.num_workers=2"
+                        f"paths.root_dir=. data.num_workers={args.num_workers} data.multiprocessing=True{extra_cmd}"
                     )
                     run_command(cmd)
                     val = get_latest_metric("mvc", log_type="train")
