@@ -256,7 +256,13 @@ def mis_loss_pyg(batch, alpha=1.0, beta=1.01, reduction='sum', complement=False)
     for data in data_list:
         size_term = -alpha * data.x.sum()
 
-        edge_index = data.edge_index_c if complement else data.edge_index
+        if complement:
+            if not hasattr(data, 'edge_index_c') or data.edge_index_c is None:
+                from src.utils.utils_graphgym import negate_edge_index
+                data.edge_index_c = negate_edge_index(data.edge_index, getattr(data, 'batch', None))
+            edge_index = data.edge_index_c
+        else:
+            edge_index = data.edge_index
         src, dst = edge_index
         edge_penalty = torch.sum(data.x[src] * data.x[dst]) / 2
         penalty_term = beta * edge_penalty
@@ -288,7 +294,13 @@ def mis_loss_qubo_pyg(batch, penalty=2.0, reduction='sum', complement=False):
     for data in data_list:
         size_term = -torch.sum(data.x ** 2)
 
-        edge_index = data.edge_index_c if complement else data.edge_index
+        if complement:
+            if not hasattr(data, 'edge_index_c') or data.edge_index_c is None:
+                from src.utils.utils_graphgym import negate_edge_index
+                data.edge_index_c = negate_edge_index(data.edge_index, getattr(data, 'batch', None))
+            edge_index = data.edge_index_c
+        else:
+            edge_index = data.edge_index
         src, dst = edge_index
         edge_penalty = torch.sum(data.x[src] * data.x[dst]) / 2
         penalty_term = penalty * edge_penalty

@@ -91,7 +91,8 @@ def evaluate(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
     log.info("Starting testing!")
     start = time.time()
-    trainer.test(model=model, datamodule=datamodule, ckpt_path=cfg.ckpt_path)
+    ckpt_path = None if cfg.ckpt_path in [None, "null", "None"] else cfg.ckpt_path
+    trainer.test(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
     end = time.time()
     log.info(f"Evaluation time: {end - start:.2f} seconds !")
 

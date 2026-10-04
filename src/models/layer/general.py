@@ -166,6 +166,12 @@ class LayerWrapper(torch.nn.Module):
         if self.edge_attr and hasattr(batch, 'edge_attr') and batch.edge_attr is not None:
             batch.x = self.layer(batch.x, batch.edge_index, batch.edge_attr)
         else:
-            edge_index = batch.edge_index_c if self.complement else batch.edge_index
+            if self.complement:
+                if not hasattr(batch, 'edge_index_c') or batch.edge_index_c is None:
+                    from src.utils.utils_graphgym import negate_edge_index
+                    batch.edge_index_c = negate_edge_index(batch.edge_index, getattr(batch, 'batch', None))
+                edge_index = batch.edge_index_c
+            else:
+                edge_index = batch.edge_index
             batch.x = self.layer(batch.x, edge_index)
         return batch
