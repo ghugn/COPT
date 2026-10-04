@@ -127,20 +127,12 @@ def render_table(results):
         our_sc_str = f"{our_sc_val:.2f}" if our_sc_val is not None else "—"
         
         if our_ft_val is not None:
-            # Check if FT won over Scratch
-            if our_sc_val is not None:
-                won = (our_ft_val > our_sc_val) if goal == "higher" else (our_ft_val < our_sc_val)
-                star = " ★" if won else ""
-            else:
-                star = ""
-            our_ft_str = f"{our_ft_val:.2f}{star}"
+            our_ft_str = f"{our_ft_val:.2f}"
         else:
             our_ft_str = "—"
 
         lines.append(f"{meta['name']:<16} {p_sc:<22} {p_ft:<20} {our_sc_str:<18} {our_ft_str:<18}")
 
-    lines.append("=" * 96)
-    lines.append("Note: ★ indicates Fine-Tuning outperforms From Scratch in 20 epochs (Paper Hypothesis Confirmed).")
     lines.append("=" * 96)
     return "\n".join(lines)
 
