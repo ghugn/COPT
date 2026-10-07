@@ -140,6 +140,7 @@ def main():
     args = parse_args()
     args.checkpoint = args.checkpoint.resolve()
     args.data_dir = args.data_dir.resolve()
+    args.instances = [name.lower() for name in args.instances]
     if not args.checkpoint.is_file():
         raise FileNotFoundError(args.checkpoint)
 
