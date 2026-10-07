@@ -21,7 +21,7 @@ DIMACS_CANDIDATES = {
     # Group: c (random)
     "c125.9": [f"{CMU_BASE}/C125.9.clq", f"{GITHUB_BASE}/C125.9.clq"],
     "c250.9": [f"{CMU_BASE}/C250.9.clq", f"{GITHUB_BASE}/C250.9.clq"],
-    "c400.5": [f"{CMU_BASE}/C400.5.clq"],
+    "c4000.5": [f"{CMU_BASE}/C4000.5.clq"],
     "c500.9": [f"{CMU_BASE}/C500.9.clq", f"{GITHUB_BASE}/C500.9.clq"],
     "c1000.9": [f"{CMU_BASE}/C1000.9.clq", f"{GITHUB_BASE}/C1000.9.clq"],
     "c2000.5": [f"{CMU_BASE}/C2000.5.clq", f"{GITHUB_BASE}/C2000.5.clq"],

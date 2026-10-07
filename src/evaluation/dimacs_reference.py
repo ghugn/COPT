@@ -6,7 +6,8 @@ TABLE15 = {
     "c2000.5": {"pretrained": 11, "random": 9, "best_known": 16},
     "c2000.9": {"pretrained": 48, "random": 28, "best_known": 80},
     "c250.9": {"pretrained": 36, "random": 28, "best_known": 44},
-    "c400.5": {"pretrained": 10, "random": 8, "best_known": 18},
+    # The published table prints "C400.5"; the DIMACS instance is C4000.5.
+    "c4000.5": {"pretrained": 10, "random": 8, "best_known": 18},
     "c500.9": {"pretrained": 50, "random": 30, "best_known": 57},
     "dsjc1000.5": {"pretrained": 11, "random": 8, "best_known": 15},
     "dsjc500.5": {"pretrained": 10, "random": 8, "best_known": 13},
@@ -42,4 +43,3 @@ TABLE15 = {
 
 TABLE15_INSTANCES = tuple(TABLE15)
 KNOWN_OPTIMA = {name: values["best_known"] for name, values in TABLE15.items()}
-
