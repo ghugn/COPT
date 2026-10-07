@@ -98,8 +98,14 @@ def find_latest_checkpoint(min_mtime=None):
     valid = [p for p in ckpt_files if p.stat().st_size > 1000]
     if not valid:
         return None
-    valid.sort(key=lambda p: p.stat().st_mtime, reverse=True)
-    return valid[0]
+    # The run directory contains both the best epoch checkpoint and last.ckpt.
+    # last.ckpt is usually written later, so sorting only by mtime silently
+    # selects the wrong model. ModelCheckpoint keeps one non-last checkpoint
+    # for the best val/size; prefer that file.
+    best_candidates = [p for p in valid if p.name != "last.ckpt"]
+    candidates = best_candidates or valid
+    candidates.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+    return candidates[0]
 
 def format_stat(vals):
     if not vals:
