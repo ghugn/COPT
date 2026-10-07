@@ -2,18 +2,12 @@ from typing import Union, Tuple, List, Dict, Any
 
 import torch
 import networkx as nx
-try:
-    import dwave_networkx as dnx
-    import dimod
-except ImportError:
-    dnx = None
-    dimod = None
+import dwave_networkx as dnx
+import dimod
 
 
 
 def compute_maxcut(g):
-    if dnx is None or dimod is None:
-        raise ImportError("dwave_networkx and dimod are required for compute_maxcut. Install with: pip install dwave-networkx dimod")
     adj = torch.from_numpy(nx.to_numpy_array(g))
     num_nodes = adj.size(0)
 

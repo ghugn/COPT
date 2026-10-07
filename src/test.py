@@ -6,15 +6,6 @@ from lightning import LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
 
-import torch
-import functools
-_orig_torch_load = torch.load
-@functools.wraps(_orig_torch_load)
-def _safe_torch_load(*args, **kwargs):
-    kwargs["weights_only"] = False
-    return _orig_torch_load(*args, **kwargs)
-torch.load = _safe_torch_load
-
 from src.models.copt_module import COPTModule
 
 rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)

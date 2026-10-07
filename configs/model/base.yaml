@@ -27,7 +27,7 @@ net:
       dim_in: 1
       dim_pe: ${model.net.dim_inner}
       dim_emb: ${model.net.dim_inner}
-      stat_list: ${data.graph_stats}
+      stat_list: ['degree', 'eccentricity', 'cluster_coefficient', 'triangle_count']
     node_encoder_bn: True
   conv_ffn: False
   layers_pre_mp: 1

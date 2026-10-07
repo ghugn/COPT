@@ -7,10 +7,7 @@ import torch
 from torch_geometric.data import Batch
 from torch_geometric.utils import unbatch, unbatch_edge_index, add_self_loops, \
     remove_self_loops, to_dense_adj
-try:
-    from torch_scatter import scatter
-except ImportError:
-    from torch_geometric.utils import scatter
+from torch_scatter import scatter
 
 
 def accuracy(output, target):
@@ -694,14 +691,7 @@ def mis_decoder_pyg_parallel(batch, dec_length=300, num_seeds=1, complement=Fals
 
     for data in data_list:
         order = torch.argsort(data.x, dim=0, descending=True).squeeze()
-
-        if complement:
-            if not hasattr(data, 'edge_index_c') or data.edge_index_c is None:
-                from src.utils.utils_graphgym import negate_edge_index
-                data.edge_index_c = negate_edge_index(data.edge_index, getattr(data, 'batch', None))
-            edge_index = data.edge_index_c
-        else:
-            edge_index = data.edge_index
+        edge_index = data.edge_index_c if complement else data.edge_index
         edge_index = remove_self_loops(edge_index)[0]
         src, dst = edge_index[0], edge_index[1]
         num_nodes = data.num_nodes

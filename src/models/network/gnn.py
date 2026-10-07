@@ -486,8 +486,7 @@ class MultiHybridGNN(GNN):
         self.tasks = finetuning['new_tasks'] #replace tasks with finetuning tasks
         
         # Load checkpoint
-        map_loc = 'cpu' if not torch.cuda.is_available() else None
-        checkpoint = torch.load(path, map_location=map_loc, weights_only=False)
+        checkpoint = torch.load(path, weights_only=False)
         state_dict = checkpoint['state_dict']
         
         # Extract backbone weights (remove 'net.' prefix, exclude 'post_mp')

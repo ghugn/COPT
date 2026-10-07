@@ -1,114 +1,161 @@
-# COPT-MT: Transferable Models for Graph Combinatorial Optimization
+# COPT-MT — clean upstream baseline
 
-Implementation and benchmark reproduction of the paper:
-> **"Can Computational Reducibility Lead to Transferable Models for Graph Combinatorial Optimization?"**  
-> *Semih Cantürk, Frederik Wenkel, Michael Perlmutter, Guy Wolf*
+Repository này đã được làm sạch và khôi phục từ source chính thức:
 
-> **Research status:** the active codebase uses the COPT-MT method only.
-> Earlier LLM-generated patch-inference experiments are preserved under
-> `archive/llm_dimacs_v0/` and are not part of the active scientific pipeline.
-> See `docs/RESEARCH_SCOPE.md` for the boundary between reproduction and future
-> extensions.
+- Upstream: <https://github.com/semihcanturk/COPT-MT>
+- Upstream commit: `ffa19d01984e178252fd874c8a956664f93a186d`
+- `src/`, `configs/`, `run/`, `solver.py` và `pyproject.toml` được lấy nguyên trạng từ commit trên.
+- README nguyên bản của tác giả được giữ tại [`README_UPSTREAM.md`](README_UPSTREAM.md).
+- Các PDF nghiên cứu được giữ ở thư mục gốc.
+- Hai đề xuất DIMACS cũ được giữ trong [`research_notes/`](research_notes/). Chúng là ghi chú ý tưởng, không phải implementation đã được xác minh.
 
----
+Mục tiêu trước mắt là tái hiện baseline chính thức trên code sạch. Không thêm DIMACS, patch inference hoặc local search trước khi baseline RB-small khớp hợp lý với paper.
 
-## 📌 Repository Structure
+## Chạy từ đầu trên Kaggle
 
-```text
-COPT-MT/
-├── configs/               # Hydra configuration files
-│   ├── data/              # Dataset configs (ba_small, rb_small, dimacs, etc.)
-│   ├── experiment/        # Experiment recipes (multitask, transfer, baselines)
-│   ├── model/             # GCON, GNN backbones, discretizer, losses
-│   └── trainer/           # PyTorch Lightning trainer configs
-├── data/                  # Graph datasets (BA-small, RB-small, processed cache)
-├── docs/                  # Documentation and reports
-│   ├── papers/            # Original paper PDF & reference section texts
-│   └── reports/           # Word docx reports & generation scripts
-├── logs/                  # Pretrained model checkpoints (.ckpt) & metric logs
-├── scripts/               # 1-click benchmark reproduction scripts
-│   ├── run_table3.py      # Table 3: MIS ↔ MVC Pairwise Transfer on RB-small
-│   ├── run_table4.py      # Table 4: MIS → MaxClique on RB-small
-│   ├── run_table5.py      # Table 5: Leave-One-Out Fine-Tuning (20 epochs)
-│   ├── run_table7.py      # Table 7: Multi-Task Foundation Model on BA-small
-│   ├── generate_dataset.py# Graph generation utility
-│   └── solver.py          # Exact solver baseline utility
-├── src/                   # Core implementation
-│   ├── data/              # PyG Datamodules and synthetic generation
-│   ├── models/            # GCON module, Hamiltonian QUBO losses, discretizers
-│   └── transforms/        # Graph statistics and feature transforms
-├── pyproject.toml         # Python dependencies & build config
-└── README.md              # Project guide
+### 1. Tạo notebook và bật GPU
+
+Trong **Notebook settings**, chọn **Accelerator → GPU**. Sau đó kiểm tra:
+
+```python
+import torch
+
+print("PyTorch:", torch.__version__)
+print("CUDA runtime:", torch.version.cuda)
+print("CUDA available:", torch.cuda.is_available())
 ```
 
----
+Chỉ tiếp tục khi `CUDA available: True`. Không cài lại `torch` bằng pip vì có thể làm mất CUDA build của Kaggle.
 
-## 🚀 Quickstart & Installation
+### 2. Clone repository
 
-```bash
-# Install dependencies with uv (or pip)
-uv sync
-uv pip install yacs einops dwave-networkx wandb ogb performer_pytorch python-sat
-uv pip install torch_scatter torch_sparse --no-build-isolation
+```python
+%cd /kaggle/working
+!git clone https://github.com/ghugn/COPT.git COPT-MT
+%cd /kaggle/working/COPT-MT
+!git rev-parse HEAD
 ```
 
----
+Không copy `data/*/processed`, `logs/` hoặc checkpoint từ lần chạy cũ vào clean run.
 
-## 📊 1-Click Benchmark Reproduction
+### 3. Cài dependency Python
 
-Each core table from the paper can be reproduced with a single command from the project root:
-
-### 1. Table 7: Multi-Task Foundation Model on BA-small
-Huấn luyện mô hình nền tảng đa nhiệm trên cả 6 bài toán NP-hard cốt lõi (MaxCut, MaxClique, MDS, MIS, MVC, Coloring):
-```bash
-python -u scripts/run_table7.py
+```python
+%pip install -q \
+    "hydra-core>=1.3,<1.4" \
+    "hydra-colorlog>=1.2,<1.3" \
+    "lightning>=2.5,<2.7" \
+    "torch-geometric>=2.6,<2.8" \
+    hydra-submitit-launcher rootutils networkx numba POT rich wandb \
+    yacs einops dwave-networkx dimod ogb performer-pytorch python-sat
 ```
 
-### 2. Table 3: Pairwise Transferability (MIS ↔ MVC) on RB-small
-Khảo sát chuyển giao bảo toàn cấu trúc và kỹ thuật **Invert Head** ($p_{\text{MIS}} = 1 - p_{\text{MVC}}$) trên 6.000 đồ thị RB-small:
-```bash
-python -u scripts/run_table3.py
+### 4. Cài PyG extensions đúng Torch/CUDA
+
+Không dùng một URL wheel viết cứng. Cell sau tự tạo index phù hợp với Torch/CUDA hiện tại:
+
+```python
+import subprocess
+import sys
+import torch
+
+assert torch.cuda.is_available(), "Hãy bật GPU trước khi cài PyG extensions"
+
+torch_version = torch.__version__.split("+")[0]
+cuda_tag = "cu" + torch.version.cuda.replace(".", "")
+wheel_index = (
+    f"https://data.pyg.org/whl/"
+    f"torch-{torch_version}+{cuda_tag}.html"
+)
+print("Wheel index:", wheel_index)
+
+subprocess.check_call([
+    sys.executable,
+    "-m",
+    "pip",
+    "install",
+    "torch-scatter",
+    "torch-sparse",
+    "-f",
+    wheel_index,
+])
 ```
 
-### 3. Table 5: Leave-One-Out Low-Resource Fine-Tuning (20 epochs)
-Đánh giá khả năng chuyển giao siêu tốc trong điều kiện ít tài nguyên (20 epochs) so với train từ đầu:
-```bash
-python -u scripts/run_table5.py
+Nếu báo `No matching distribution found`, dừng lại và ghi lại ba giá trị `torch.__version__`, `torch.version.cuda` và phiên bản Python. Không nên tự compile hoặc đổi Torch trước khi xác định wheel tương thích.
+
+Kiểm tra môi trường:
+
+```python
+import hydra
+import lightning
+import torch
+import torch_geometric
+import torch_scatter
+
+print("Hydra:", hydra.__version__)
+print("Lightning:", lightning.__version__)
+print("Torch:", torch.__version__)
+print("PyG:", torch_geometric.__version__)
+print("CUDA:", torch.cuda.is_available())
+print("GPU:", torch.cuda.get_device_name(0))
 ```
 
-### 4. Table 4: MIS → MaxClique Transfer via Complement Graphs
-Khảo sát chuyển giao qua đồ thị bù $\bar{G}$ (MaxClique(G) = MIS($\bar{G}$)):
-```bash
-python -u scripts/run_table4.py
+### 5. Train baseline MIS trên RB-small
+
+Lệnh dưới đây dùng nguyên experiment config chính thức: seed `12345`, 6.000 RB-small graphs và tối đa 200 epochs.
+
+```python
+%cd /kaggle/working/COPT-MT
+
+!WANDB_MODE=disabled python -u src/train.py \
+    experiment=mis/rb_small/gcon \
+    logger=csv \
+    trainer.accelerator=gpu \
+    trainer.devices=1 \
+    data.num_workers=2
 ```
 
----
+Không override loss, decoder, batch size, số layer, learning rate hoặc số epoch trong clean reproduction đầu tiên.
 
-## 🏆 Tóm Tắt Kết Quả Tái Hiện Thực Tế
+### 6. Xác định best checkpoint
 
-### Table 5: Leave-One-Out Fine-Tuning (BA-small, 20 epochs)
-```text
-================================================================================
-TABLE 5: Leave-One-Out Fine-Tuning in Low-Resource Regime on BA-small (20 epochs)
-================================================================================
-TASK                 FROM SCRATCH            FINE-TUNED
---------------------------------------------------------------------------------
-↑ MAXCUT             718.92                  720.12
-↑ MAXCLIQUE          4.33                    4.36
-↓ MDS                34.54                   29.59
-↑ MIS                111.14                  111.67
-↓ MVC                140.83                  139.65
-↓ COLOR              57.47                   18.91
-================================================================================
+```python
+from pathlib import Path
+
+root = Path("/kaggle/working/COPT-MT")
+checkpoints = sorted(
+    root.glob("logs/train/runs/*/checkpoints/*.ckpt"),
+    key=lambda p: p.stat().st_mtime,
+    reverse=True,
+)
+
+for checkpoint in checkpoints[:10]:
+    size_mb = checkpoint.stat().st_size / 1024**2
+    print(checkpoint, f"{size_mb:.1f} MB")
 ```
 
-### Table 3: MIS ↔ MVC Pairwise Transfer (RB-small, 6.000 graphs)
-* **Baseline train từ đầu:** MIS = 18.31 (Paper: 18.12), MVC = 213.14 (Paper: 211.69)
-* **FT Invert + FT:** MIS = 18.01, MVC = 212.06 (Đánh bại Baseline từ đầu 213.14)
+`epoch_XXX.ckpt` là checkpoint tốt nhất theo `val/size`; `last.ckpt` chỉ là trạng thái epoch cuối. Khi đánh giá paper, ưu tiên `epoch_XXX.ckpt`.
 
----
+### 7. Lưu checkpoint khỏi Kaggle
 
-## 📑 Báo Cáo & Tài Liệu Nghiên Cứu
-* **Báo cáo tóm tắt:** [docs/reports/Bao_Cao_Y_Nghia_Benchmark_COPT.docx](docs/reports/Bao_Cao_Y_Nghia_Benchmark_COPT.docx)
-* **Tài liệu phản biện & phân tích:** [docs/reports/Giai_thich_Bench.docx](docs/reports/Giai_thich_Bench.docx)
-* **Script cập nhật báo cáo:** [docs/reports/generate_report_docx.py](docs/reports/generate_report_docx.py)
+```python
+from IPython.display import FileLink
+
+BEST_CHECKPOINT = next(p for p in checkpoints if p.name != "last.ckpt")
+print("Selected:", BEST_CHECKPOINT)
+FileLink(str(BEST_CHECKPOINT))
+```
+
+Bấm link được tạo để tải file về máy và **Save Version** notebook để kết quả trở thành Kaggle Output. `/kaggle/working` có thể mất khi session kết thúc.
+
+## Quy trình nghiên cứu đề nghị
+
+1. Chạy clean upstream với seed `12345` và lưu đầy đủ commit, config, metrics, checkpoint.
+2. Kiểm tra baseline MIS RB-small trước khi đánh giá DIMACS.
+3. Lặp lại các seed của paper nếu baseline một seed hợp lý.
+4. Chỉ sau đó mới tạo nhánh riêng để thêm loader/evaluator DIMACS.
+5. Mọi thay đổi so với upstream phải được ghi thành ablation riêng; không sửa trực tiếp baseline.
+
+## Những gì không còn trong repository
+
+Clean reset đã loại bỏ source thử nghiệm LLM, script reproduction tự viết, cache dữ liệu, logs, reports, checkpoint cũ, môi trường `.venv` và các file Word. Nếu cần khôi phục một nội dung cũ, lấy từ lịch sử Git thay vì trộn lại vào baseline sạch.

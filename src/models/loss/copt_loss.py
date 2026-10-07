@@ -1,10 +1,7 @@
 import torch
 from torch_geometric.utils import unbatch, unbatch_edge_index, remove_self_loops
 
-try:
-    from torch_scatter import scatter
-except ImportError:
-    from torch_geometric.utils import scatter
+from torch_scatter import scatter
 
 
 def entropy(output, epsilon=1e-8):
@@ -256,13 +253,7 @@ def mis_loss_pyg(batch, alpha=1.0, beta=1.01, reduction='sum', complement=False)
     for data in data_list:
         size_term = -alpha * data.x.sum()
 
-        if complement:
-            if not hasattr(data, 'edge_index_c') or data.edge_index_c is None:
-                from src.utils.utils_graphgym import negate_edge_index
-                data.edge_index_c = negate_edge_index(data.edge_index, getattr(data, 'batch', None))
-            edge_index = data.edge_index_c
-        else:
-            edge_index = data.edge_index
+        edge_index = data.edge_index_c if complement else data.edge_index
         src, dst = edge_index
         edge_penalty = torch.sum(data.x[src] * data.x[dst]) / 2
         penalty_term = beta * edge_penalty
@@ -294,13 +285,7 @@ def mis_loss_qubo_pyg(batch, penalty=2.0, reduction='sum', complement=False):
     for data in data_list:
         size_term = -torch.sum(data.x ** 2)
 
-        if complement:
-            if not hasattr(data, 'edge_index_c') or data.edge_index_c is None:
-                from src.utils.utils_graphgym import negate_edge_index
-                data.edge_index_c = negate_edge_index(data.edge_index, getattr(data, 'batch', None))
-            edge_index = data.edge_index_c
-        else:
-            edge_index = data.edge_index
+        edge_index = data.edge_index_c if complement else data.edge_index
         src, dst = edge_index
         edge_penalty = torch.sum(data.x[src] * data.x[dst]) / 2
         penalty_term = penalty * edge_penalty

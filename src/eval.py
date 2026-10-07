@@ -6,18 +6,7 @@ from lightning import Callback, LightningDataModule, LightningModule, Trainer
 from lightning.pytorch.loggers import Logger
 from omegaconf import DictConfig
 
-import torch
-import functools
-_orig_torch_load = torch.load
-@functools.wraps(_orig_torch_load)
-def _safe_torch_load(*args, **kwargs):
-    kwargs["weights_only"] = False
-    return _orig_torch_load(*args, **kwargs)
-torch.load = _safe_torch_load
-import os
-from pathlib import Path
-if "PROJECT_ROOT" not in os.environ:
-    os.environ["PROJECT_ROOT"] = str(Path(__file__).resolve().parent.parent)
+import time
 
 rootutils.setup_root(__file__, indicator=".project-root", pythonpath=True)
 # ------------------------------------------------------------------------------------ #
@@ -91,8 +80,7 @@ def evaluate(cfg: DictConfig) -> Tuple[Dict[str, Any], Dict[str, Any]]:
 
     log.info("Starting testing!")
     start = time.time()
-    ckpt_path = None if cfg.ckpt_path in [None, "null", "None"] else cfg.ckpt_path
-    trainer.test(model=model, datamodule=datamodule, ckpt_path=ckpt_path)
+    trainer.test(model=model, datamodule=datamodule, ckpt_path=cfg.ckpt_path)
     end = time.time()
     log.info(f"Evaluation time: {end - start:.2f} seconds !")
 

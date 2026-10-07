@@ -6,15 +6,8 @@ import torch
 from torch import Tensor
 from torch_geometric.utils import degree
 from torch_geometric.utils import remove_self_loops
-try:
-    from torch_scatter import scatter
-except ImportError:
-    from torch_geometric.utils import scatter
-try:
-    from yacs.config import CfgNode
-except ImportError:
-    class CfgNode(dict):
-        pass
+from torch_scatter import scatter
+from yacs.config import CfgNode
 from tqdm import tqdm
 
 

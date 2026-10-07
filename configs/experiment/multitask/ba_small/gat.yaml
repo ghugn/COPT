@@ -1,12 +1,12 @@
 # @package _global_
 
 defaults:
-  - override /data: ba_small #add a file to mix datasets? (e.g rb_large + ba_large + ...)
-  - override /model: gat
-  - override /task: multitask
-  - override /callbacks: default
-  - override /trainer: gpu
-  - override /logger: wandb
+  - override /data: ba_small.yaml #add a file to mix datasets? (e.g rb_large + ba_large + ...)
+  - override /model: gat.yaml
+  - override /task: multitask.yaml
+  - override /callbacks: default.yaml
+  - override /trainer: gpu.yaml
+  - override /logger: wandb.yaml
 
 # all parameters below will be merged with parameters from default configurations set above
 # this allows you to overwrite only specified parameters
