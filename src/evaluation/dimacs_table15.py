@@ -48,7 +48,7 @@ def sequential_independent_set_decode(
     edge_index: torch.Tensor,
     num_nodes: int,
     num_seeds: int = 10,
-    dec_length: int | None = None,
+    dec_length: int | None = 300,
 ) -> List[int]:
     """COPT-style sequential multi-seed MIS decoder.
 
@@ -99,4 +99,3 @@ def score_complement(model, data: Data, task: str = "mis", device: str = "cpu") 
     model.eval()
     batch = Batch.from_data_list([data]).to(device)
     return extract_node_scores(model(batch), task=task)
-

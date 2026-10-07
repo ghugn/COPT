@@ -131,7 +131,12 @@ def parse_args():
     parser.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     parser.add_argument("--mode", choices=("pretrained", "random"), default="pretrained")
     parser.add_argument("--num-seeds", type=int, default=10)
-    parser.add_argument("--dec-length", type=int, default=None)
+    parser.add_argument(
+        "--dec-length",
+        type=int,
+        default=300,
+        help="Maximum number of ranked vertices scanned by the COPT decoder (paper/config default: 300)",
+    )
     parser.add_argument("--instances", nargs="*", default=list(TABLE15_INSTANCES))
     return parser.parse_args()
 
