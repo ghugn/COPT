@@ -4,6 +4,12 @@ Implementation and benchmark reproduction of the paper:
 > **"Can Computational Reducibility Lead to Transferable Models for Graph Combinatorial Optimization?"**  
 > *Semih Cantürk, Frederik Wenkel, Michael Perlmutter, Guy Wolf*
 
+> **Research status:** the active codebase uses the COPT-MT method only.
+> Earlier LLM-generated patch-inference experiments are preserved under
+> `archive/llm_dimacs_v0/` and are not part of the active scientific pipeline.
+> See `docs/RESEARCH_SCOPE.md` for the boundary between reproduction and future
+> extensions.
+
 ---
 
 ## 📌 Repository Structure

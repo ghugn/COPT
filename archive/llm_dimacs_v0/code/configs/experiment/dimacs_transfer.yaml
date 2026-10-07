@@ -1,0 +1,54 @@
+# @package _global_
+
+# Experiment configuration for Stage 3: Transferability Ablation Benchmark
+# Compares 3 Modes:
+#   Mode A: Random Init + Patch Inference + Greedy
+#   Mode B: Pretrained Zero-shot + Patch Inference + Greedy
+#   Mode C: Pretrained + Few-shot Fine-tune (DirectMaxCliqueLoss) + Patch Inference + Greedy
+
+tags: ["dimacs", "transfer_learning", "ablation_benchmark", "maxclique"]
+
+seed: 12345
+
+# Pretrained multi-task foundation model
+checkpoint_path: "logs/train/checkpoints/multitask/epoch_194.ckpt"
+
+# Patch-based inference settings
+patch_inference:
+  patch_size: 200
+  num_patches: 20
+  num_hops: 2
+  task_head: "mis"
+  aggregation: "mean"
+
+# Greedy decoder & verification settings
+decoder:
+  num_seeds: 10
+  use_local_search: true
+
+# Mode C few-shot unsupervised fine-tuning settings
+finetuning:
+  epochs: 10
+  lr: 0.001
+  alpha: 1.0
+  beta: 1.1
+  gamma: 0.3
+  scale_balance: false
+
+# DIMACS benchmark evaluation instances (representative across random, hidden, coding, coding/hamming)
+instances:
+  - "c125.9"
+  - "c250.9"
+  - "c500.9"
+  - "p_hat300-1"
+  - "p_hat300-2"
+  - "keller4"
+  - "brock200_2"
+  - "brock200_4"
+  - "MANN_a9"
+  - "hamming8-4"
+
+output:
+  report_dir: "reports/stage3_transferability"
+  save_json: true
+  save_markdown: true
