@@ -693,6 +693,8 @@ def mis_decoder_pyg_parallel(batch, dec_length=300, num_seeds=1, complement=Fals
     data_list = batch.to_data_list()
 
     for data in data_list:
+        order = torch.argsort(data.x, dim=0, descending=True).squeeze()
+
         if complement:
             if not hasattr(data, 'edge_index_c') or data.edge_index_c is None:
                 from src.utils.utils_graphgym import negate_edge_index
