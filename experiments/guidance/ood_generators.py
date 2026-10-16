@@ -100,9 +100,12 @@ def fetch_dimacs_instance(name, cache_dir="data/dimacs_cache"):
         if name in DIMACS_RAW_URLS:
             url = DIMACS_RAW_URLS[name]
             print(f"[DIMACS] Downloading instance '{name}' from {url}...")
-            urllib.request.urlretrieve(url, target_file)
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+            with urllib.request.urlopen(req, timeout=20) as resp, open(target_file, "wb") as f_out:
+                f_out.write(resp.read())
         else:
             raise ValueError(f"Instance '{name}' khong co trong danh sach: {list(DIMACS_RAW_URLS.keys())}")
+
 
             
     return parse_dimacs_file(target_file)
