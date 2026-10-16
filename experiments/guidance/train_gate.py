@@ -181,8 +181,12 @@ def train_and_evaluate():
     res_df.to_csv(out_dir / "m2_evaluation_table.csv", index=False)
     with open(out_dir / "gate_rules.txt", "w", encoding="utf-8") as f:
         f.write(tree_rules)
+    import joblib
+    joblib.dump(final_gate, out_dir / "gate_model.joblib")
     print(f"\nĐã lưu kết quả đánh giá vào: {out_dir}/m2_evaluation_table.csv")
     print(f"Đã lưu luật điều phối vào: {out_dir}/gate_rules.txt")
+    print(f"Đã lưu checkpoint mô hình Gate vào: {out_dir}/gate_model.joblib")
+
 
 
 if __name__ == "__main__":

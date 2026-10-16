@@ -15,7 +15,9 @@ from experiments.guidance.gate import CostAwareGate
 
 
 def run_online_benchmark(checkpoint, device="cuda", sizes=(120, 150), densities=(0.6, 0.7),
-                         graphs_per_cell=3, seconds=5.0, top_k=3, seed=32345, output_dir="artifacts/m3_online"):
+                         graphs_per_cell=3, seconds=5.0, top_k=3, seed=32345,
+                         output_dir="artifacts/m3_online", gate_mode="rule",
+                         gate_model="artifacts/m2_gate/gate_model.joblib"):
     output_path = Path(output_dir)
     output_path.mkdir(parents=True, exist_ok=True)
     
@@ -25,7 +27,8 @@ def run_online_benchmark(checkpoint, device="cuda", sizes=(120, 150), densities=
         print(f"Đang nạp mô hình COPT từ: {checkpoint}")
         scorer = COPTScorer(checkpoint, device)
         
-    gate = CostAwareGate(mode="rule")
+    gate = CostAwareGate(mode=gate_mode, model_path=gate_model)
+
     
     results = []
     g_count = 0
@@ -114,6 +117,8 @@ if __name__ == "__main__":
     parser.add_argument("--graphs-per-cell", type=int, default=3)
     parser.add_argument("--seconds", type=float, default=5.0)
     parser.add_argument("--top-k", type=int, default=3)
+    parser.add_argument("--gate-mode", type=str, default="rule", choices=["rule", "model"])
+    parser.add_argument("--gate-model", type=str, default="artifacts/m2_gate/gate_model.joblib")
     parser.add_argument("--output", type=str, default="artifacts/m3_online")
     args = parser.parse_args()
     
@@ -125,6 +130,9 @@ if __name__ == "__main__":
         graphs_per_cell=args.graphs_per_cell,
         seconds=args.seconds,
         top_k=args.top_k,
-        output_dir=args.output
+        output_dir=args.output,
+        gate_mode=args.gate_mode,
+        gate_model=args.gate_model
     )
+
 

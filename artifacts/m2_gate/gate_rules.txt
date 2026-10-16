@@ -1,0 +1,19 @@
+|--- degree_mean <= 82.64
+|   |--- color_gap <= 28.50
+|   |   |--- class: 0
+|   |--- color_gap >  28.50
+|   |   |--- degree_min <= 56.00
+|   |   |   |--- class: 0
+|   |   |--- degree_min >  56.00
+|   |   |   |--- class: 0
+|--- degree_mean >  82.64
+|   |--- density <= 0.60
+|   |   |--- color_gap <= 37.50
+|   |   |   |--- class: 0
+|   |   |--- color_gap >  37.50
+|   |   |   |--- class: 0
+|   |--- density >  0.60
+|   |   |--- density <= 0.71
+|   |   |   |--- class: 1
+|   |   |--- density >  0.71
+|   |   |   |--- class: 0

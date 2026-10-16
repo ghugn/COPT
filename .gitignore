@@ -15,7 +15,8 @@ wandb/
 
 # Generated datasets and model artifacts
 data/
-artifacts/
+artifacts/*
+!artifacts/m2_gate/
 
 # OS / editor
 .DS_Store

@@ -8,15 +8,27 @@ from experiments.guidance.solver import vertices, color_bound
 class CostAwareGate:
     """Bộ điều phối học máy nhạy cảm chi phí (Cost-Aware Gate)."""
     
-    def __init__(self, mode="rule", model_path=None):
+    FEATURE_COLS = [
+        "candidate_n", "density", "depth", "is_root",
+        "color_gap", "degree_mean", "degree_max", "degree_min"
+    ]
+    
+    def __init__(self, mode="rule", model_path="artifacts/m2_gate/gate_model.joblib"):
         self.mode = mode
         self.model = None
         if mode == "model" and model_path is not None:
-            import joblib
-            self.model = joblib.load(model_path)
+            from pathlib import Path
+            p = Path(model_path)
+            if p.exists():
+                import joblib
+                self.model = joblib.load(p)
+                print(f"[CostAwareGate] Đã nạp checkpoint Gate từ: {p}")
+            else:
+                print(f"[CostAwareGate] Cảnh báo: Không tìm thấy {p}, fallback sang mode='rule'")
+                self.mode = "rule"
             
     @staticmethod
-    def extract_features(adj, mask, clique_len, best_len):
+    def extract_features(adj, mask, clique_len=0, best_len=0, depth=0):
         """
         Trích xuất đặc trưng nhẹ phi(s) trong < 0.05ms từ trạng thái tìm kiếm hiện tại.
         """
@@ -46,6 +58,8 @@ class CostAwareGate:
         return {
             "candidate_n": n_candidates,
             "density": density,
+            "depth": depth,
+            "is_root": 1 if depth == 0 else 0,
             "color_gap": color_gap,
             "degree_mean": deg_mean,
             "degree_max": deg_max,
@@ -55,29 +69,23 @@ class CostAwareGate:
     def should_call(self, feats):
         """
         Quyết định có kích hoạt Neural Guidance (COPT) hay không.
-        Sử dụng bộ luật tối ưu đã học từ Milestone M2 trên Vùng cao nguyên khó.
+        Khớp 100% với cây quyết định nhạy cảm chi phí đã học ở Milestone M2:
+        - Chỉ kích hoạt khi degree_mean > 82.64 VÀ density nằm trong (0.60, 0.71].
+        - Từ chối tuyệt đối mọi đồ thị nhỏ, mật độ loãng hoặc quá dễ.
         """
         if feats is None:
             return False
             
         if self.mode == "model" and self.model is not None:
-            cols = ["candidate_n", "density", "color_gap", "degree_mean", "degree_max", "degree_min"]
-            x = [[feats[c] for c in cols]]
+            x = [[feats[c] for c in self.FEATURE_COLS]]
             return bool(self.model.predict(x)[0])
             
-        # Bộ luật Cây Quyết Định tối ưu (chạy trong < 0.001ms):
+        # Bộ luật Cây Quyết Định tối ưu chuẩn hóa từ artifacts/m2_gate/gate_rules.txt
+        deg_mean = feats["degree_mean"]
         density = feats["density"]
-        deg_max = feats["degree_max"]
-        deg_min = feats["degree_min"]
-        color_gap = feats["color_gap"]
         
-        if density <= 0.60:
-            if color_gap <= 37.50:
-                return deg_max <= 83.50
-            else:
-                return deg_min <= 91.50
-        else:
-            if deg_max <= 94.50:
-                return False
-            else:
-                return density <= 0.71
+        # Cây M2: Bậc trung bình phải > 82.64 VÀ mật độ nằm trong (0.60, 0.71]
+        if deg_mean > 82.64 and (0.60 < density <= 0.71):
+            return True
+        return False
+
