@@ -122,12 +122,14 @@ Chiến dịch đầu tiên khảo sát trên 60 đồ thị Erd\H{o}s--R\'enyi 
 
 \begin{table}[ht]
 \centering
-\small
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
 \caption{Đặc tính tìm kiếm và chi phí tính toán trung bình theo kích thước đồ thị $N$ trên 866 trạng thái hoàn tất chứng minh tối ưu.}
 \label{tab:m1_scaling}
 \begin{tabular}{crrrrrrr}
 \toprule
 $N$ & Số mẫu & Nodes (Struct) & Nodes (COPT) & $T_{\mathrm{struct}}$ (s) & $T_{\mathrm{search}}^{\mathrm{copt}}$ (s) & $T_{\mathrm{overhead}}^{\mathrm{copt}}$ (s) & $T_{\mathrm{total}}^{\mathrm{copt}}$ (s) \\
+
 \midrule
 40  & 201 & 21.3  & 24.7  & 0.0007 & 0.0008 & 0.0631 & 0.0640 \\
 60  & 225 & 56.6  & 60.3  & 0.0026 & 0.0028 & 0.0646 & 0.0674 \\
@@ -175,11 +177,12 @@ Nhằm hiện thực hóa dư địa cải thiện từ Hindsight Oracle, chúng
 \begin{table}[ht]
 \centering
 \small
+\setlength{\tabcolsep}{4.5pt}
 \caption{Bảng đối so sánh hiệu năng các chính sách điều phối trên 96 trạng thái khó (Milestone M2).}
 \label{tab:m2_eval}
-\begin{tabular}{lrrrrr}
+\begin{tabularx}{\linewidth}{Xrrrrr}
 \toprule
-Chính sách điều phối & Tổng thời gian (s) & Tiết kiệm ròng (s) & Tỷ lệ tiết kiệm & Regret so với Oracle (s) & Tỷ lệ gọi neural \\
+Chính sách điều phối & Thời gian (s) & Tiết kiệm (s) & \% Tiết kiệm & Regret (s) & Tỷ lệ gọi \\
 \midrule
 1. Never-Call (Structural) & 169.69 & 0.00 & $0.00\%$ & 5.02 & $0.0\%$ \\
 2. Always-Call (Naive COPT) & 172.81 & -3.13 & $-1.84\%$ & 8.15 & $100.0\%$ \\
@@ -189,7 +192,7 @@ Chính sách điều phối & Tổng thời gian (s) & Tiết kiệm ròng (s) &
 \midrule
 5. Hindsight Oracle (Lý tưởng) & 164.67 & +5.02 & $+2.96\%$ & 0.00 & $39.6\%$ \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table}
 
 Kết quả khẳng định Cost-Aware Gate là \textbf{chính sách duy nhất đạt mức tiết kiệm thời gian thực dương (+1.23 giây)}, hạ thấp độ hối tiếc xuống mức kỷ lục ($3.79\text{s}$) và có tỷ lệ kích hoạt ($36.5\%$) bám sát nút tỷ lệ tối ưu của Oracle ($39.6\%$).
@@ -200,27 +203,29 @@ Kết quả khẳng định Cost-Aware Gate là \textbf{chính sách duy nhất 
 \begin{table}[ht]
 \centering
 \small
+\setlength{\tabcolsep}{3.5pt}
 \caption{Đánh giá trực tuyến (End-to-End Online Search) trên 42 đồ thị kiểm thử độc lập đa mật độ (Milestone M3).}
 \label{tab:m3_eval}
-\begin{tabular}{lrrrrr}
+\begin{tabularx}{\linewidth}{lXrrrr}
 \toprule
-Phân tầng thực nghiệm & Chỉ số đo lường & Cổ điển (Structural) & Naive COPT (Always) & \textbf{Cost-Aware Gate M3} & Chênh lệch (Gate vs Cổ điển) \\
+Phân tầng & Chỉ số đo lường & Cổ điển & Naive COPT & \textbf{Gate M3} & Chênh lệch (Gate) \\
 \midrule
 \textbf{Vùng Dễ} & Thời gian chạy (s) & 14.08 & 15.87 & \textbf{13.95} & \textbf{+0.13 s (Tiết kiệm)} \\
 ($p = 0.60$, 21 đồ thị) & Số nút tìm kiếm & 280,352 & 270,119 & 272,773 & \textbf{-7,579 nút} \\
 & Tỷ lệ gọi neural & $0.0\%$ & $100.0\%$ & $28.6\%$ & Tránh bẫy overhead \\
 \midrule
-\textbf{Vùng Cao nguyên Khó} & Thời gian chạy (s) & 110.62 & 107.66 & \textbf{107.32} & \textbf{+3.30 s (Tiết kiệm)} \\
+\textbf{Cao nguyên Khó} & Thời gian chạy (s) & 110.62 & 107.66 & \textbf{107.32} & \textbf{+3.30 s (Tiết kiệm)} \\
 ($p = 0.70$, 21 đồ thị) & Số nút tìm kiếm & 2,014,746 & 1,918,440 & 1,926,317 & \textbf{-88,429 nút} \\
-& Tỷ lệ gọi neural & $0.0\%$ & $100.0\%$ & $95.2\%$ & Nhận diện bài toán khó \\
+& Tỷ lệ gọi neural & $0.0\%$ & $100.0\%$ & $95.2\%$ & Nhận diện bài khó \\
 \midrule
-\textbf{TỔNG THỂ TOÀN CỤC} & \textbf{Tổng thời gian (s)} & \textbf{124.70} & \textbf{123.53} & \textbf{121.27} & \textbf{+3.43 s (Vô địch toàn diện)} \\
-($N \in \{120, 140, 150\}$, & \textbf{Tổng số nút duyệt} & \textbf{2,295,098} & \textbf{2,188,559} & \textbf{2,199,090} & \textbf{-96,008 nút (Cắt tỉa)} \\
-42 đồ thị kiểm thử) & Tỷ lệ gọi neural & $0.0\%$ & $100.0\%$ & $61.9\%$ & Điều phối thích ứng linh hoạt \\
-& Chứng minh tối ưu & 42/42 ($100\%$) & 42/42 ($100\%$) & 42/42 ($100\%$) & Bảo toàn 100\% tính chính xác \\
+\textbf{TOÀN CỤC (42 đồ thị)} & \textbf{Tổng thời gian (s)} & \textbf{124.70} & \textbf{123.53} & \textbf{121.27} & \textbf{+3.43 s (Vô địch)} \\
+($N \in \{120, 140, 150\}$) & \textbf{Tổng số nút duyệt} & \textbf{2,295,098} & \textbf{2,188,559} & \textbf{2,199,090} & \textbf{-96,008 nút (Cắt tỉa)} \\
+& Tỷ lệ gọi neural & $0.0\%$ & $100.0\%$ & $61.9\%$ & Điều phối thích ứng \\
+& Chứng minh tối ưu & 42/42 & 42/42 & 42/42 & 100\% chính xác \\
 \bottomrule
-\end{tabular}
+\end{tabularx}
 \end{table}
+
 
 Bảng~\ref{tab:m3_eval} mang lại ba kết luận khoa học có ý nghĩa phương pháp luận then chốt:
 \begin{enumerate}[leftmargin=*]
