@@ -100,24 +100,50 @@ def run_online_benchmark(checkpoint, device="cuda", sizes=(120, 150), densities=
         "savings_on_both_exhausted": savings_on_both
     }
     
+    # Thêm tổng số node
+    summary["struct_nodes_total"] = int(df["struct_nodes"].sum())
+    summary["always_nodes_total"] = int(df["always_nodes"].sum())
+    summary["gate_nodes_total"] = int(df["gate_nodes"].sum())
+    summary["node_reduction_total"] = summary["struct_nodes_total"] - summary["gate_nodes_total"]
+    
     with open(output_path / "summary.json", "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
         
     print("\n" + "="*70)
     print("           TỔNG KẾT THỰC NGHIỆM MILESTONE M3 (ONLINE BENCHMARK)")
     print("="*70)
-    print(f"Tổng số đồ thị kiểm thử:      {len(df)}")
-    print(f"Số ca chứng minh xong (Struct): {summary['struct_exhausted']}/{len(df)}")
-    print(f"Số ca chứng minh xong (Gate):   {summary['gate_exhausted']}/{len(df)}")
-    print(f"Tổng thời gian Structural:      {summary['struct_total_time']:.2f}s")
-    print(f"Tổng thời gian Always COPT:     {summary['always_total_time']:.2f}s")
-    print(f"Tổng thời gian Gate M3:         {summary['gate_total_time']:.2f}s")
-    print(f"Tiết kiệm ròng của Gate M3:     {summary['gate_net_savings']:+.2f}s")
+    print(f"Tổng số đồ thị kiểm thử:        {len(df)}")
+    print(f"Số ca chứng minh xong (Struct):   {summary['struct_exhausted']}/{len(df)}")
+    print(f"Số ca chứng minh xong (Gate):     {summary['gate_exhausted']}/{len(df)}")
+    print(f"Tổng thời gian Structural:        {summary['struct_total_time']:.2f}s")
+    print(f"Tổng thời gian Always COPT:       {summary['always_total_time']:.2f}s")
+    print(f"Tổng thời gian Gate M3:           {summary['gate_total_time']:.2f}s")
+    print(f"Tiết kiệm ròng của Gate M3:       {summary['gate_net_savings']:+.2f}s")
     if len(both_ex) > 0:
         print(f"Tiết kiệm trên ca hoàn tất ({len(both_ex)} đồ thị): {summary['savings_on_both_exhausted']:+.2f}s")
-    print(f"Tỷ lệ kích hoạt Gate:           {summary['gate_call_count']}/{len(df)} ({summary['gate_call_rate_pct']:.1f}%)")
+    print(f"Tổng số Node cắt tỉa được:        {summary['node_reduction_total']:,} nodes")
+    print(f"Tỷ lệ kích hoạt Gate:             {summary['gate_call_count']}/{len(df)} ({summary['gate_call_rate_pct']:.1f}%)")
+    print("="*70)
+    
+    print("\n" + "="*70)
+    print("       BẢNG PHÂN TÍCH CHI TIẾT THEO MẬT ĐỘ (PHÂN TẦNG ĐỘ KHÓ)")
+    print("="*70)
+    for p_val, sub in df.groupby("density"):
+        s_t = sub["struct_time"].sum()
+        a_t = sub["always_time"].sum()
+        g_t = sub["gate_time"].sum()
+        sav = s_t - g_t
+        c_rate = sub["gate_called"].mean() * 100.0
+        s_nodes = sub["struct_nodes"].sum()
+        g_nodes = sub["gate_nodes"].sum()
+        node_sav = s_nodes - g_nodes
+        print(f"► Mật độ p = {p_val:.2f} ({len(sub)} đồ thị):")
+        print(f"   Thời gian: Struct={s_t:6.2f}s | Always={a_t:6.2f}s | Gate={g_t:6.2f}s -> Tiết kiệm: {sav:+6.2f}s")
+        print(f"   Số Node:   Struct={s_nodes:8,d} | Gate={g_nodes:8,d} -> Cắt tỉa: {node_sav:+8,d} nodes")
+        print(f"   Tỷ lệ gọi: {c_rate:5.1f}%")
     print("="*70)
     return summary
+
 
 
 
