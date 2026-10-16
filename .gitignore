@@ -26,7 +26,9 @@ Thumbs.db
 
 # Guidance bundles & scratch
 *.zip
+!docs/proposal/overleaf_proposal.zip
 full7.docx
+
 full7_extracted.txt
 guidance_results_full_m1_m1b/
 overleaf_proposal_MSO_Lab/
