@@ -274,7 +274,7 @@ Kết quả thực nghiệm trên bộ DIMACS khẳng định ba kết luận h�
     \item \textbf{Ưu thế kinh tế của Gate so với Naive Neural:} Trên các đồ thị dễ hoặc thưa giải xong dưới $0.6\text{s}$ (\texttt{sample}, \texttt{brock200\_2}), Gate chủ động bỏ qua suy luận neural (\textit{Skipped}), triệt tiêu hoàn toàn độ trễ GPU. Nhờ đó, Gate M4 đạt tổng thời gian chạy $42.85\text{s}$, xuất sắc đánh bại cả Naive Always COPT ($43.51\text{s}$) lẫn Cổ điển ($46.82\text{s}$), đạt mức tiết kiệm ròng kỷ lục \textbf{$+3.97$ giây}.
 \end{enumerate}
 
-\\subsection{Thảo luận chuyên sâu: Hạn chế của GNN Hiện tại (Chưa được học BnB) và Tầm nhìn Mô hình Thế hệ mới (Kết hợp Karp, BnB và Diffusion)}
+\subsection{Thảo luận chuyên sâu: Hạn chế của GNN Hiện tại (Chưa được học BnB) và Tầm nhìn Mô hình Thế hệ mới (Kết hợp Karp, BnB và Diffusion)}
 Một trong những phát hiện phương pháp luận quan trọng nhất từ kết quả thực nghiệm M1--M4 là sự xác lập rõ ràng về vai trò của mô hình GNN hiện tại:
 \begin{enumerate}[leftmargin=*]
     \item \textbf{COPT chỉ là một đại diện Zero-shot chưa từng được học cho Branch-and-Bound:} Checkpoint COPT sử dụng trong các mốc M1--M4 vốn được huấn luyện tĩnh bằng hàm mất mát Binary Cross-Entropy (BCE) và tương phản đa nhiệm cho bài toán Maximum Independent Set trên các đồ thị tổng hợp nhỏ. Mô hình này \textbf{hoàn toàn chưa từng được tiếp xúc với động lực học cây tìm kiếm Branch-and-Bound (BnB)}, không hiểu cơ chế cắt tỉa của Cận tô màu (Coloring Upper Bound), và không được tối ưu để phân biệt ranh giới hối tiếc thời gian thực.
