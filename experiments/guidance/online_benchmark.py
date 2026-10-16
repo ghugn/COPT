@@ -109,6 +109,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--checkpoint", type=str, default=None)
     parser.add_argument("--device", type=str, default="cuda")
+    parser.add_argument("--sizes", type=int, nargs="+", default=[120, 150])
+    parser.add_argument("--densities", type=float, nargs="+", default=[0.6, 0.7])
+    parser.add_argument("--graphs-per-cell", type=int, default=3)
     parser.add_argument("--seconds", type=float, default=5.0)
     parser.add_argument("--top-k", type=int, default=3)
     parser.add_argument("--output", type=str, default="artifacts/m3_online")
@@ -117,7 +120,11 @@ if __name__ == "__main__":
     run_online_benchmark(
         checkpoint=args.checkpoint,
         device=args.device,
+        sizes=tuple(args.sizes),
+        densities=tuple(args.densities),
+        graphs_per_cell=args.graphs_per_cell,
         seconds=args.seconds,
         top_k=args.top_k,
         output_dir=args.output
     )
+
