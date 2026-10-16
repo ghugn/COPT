@@ -1,0 +1,1215 @@
+UCPO: A Universal Constrained Combinatorial Optimization Method via
+Preference Optimization
+Zhanhong Fang1*, Debing Wang1*, Jinbiao Chen2, Jiahai Wang1, Zizhen Zhang1†
+1School of Computer Science and Engineering, Sun Yat-sen University, Guangzhou 510006, China
+2Department of Industrial Systems Engineering & Management, National University of Singapore, Singapore
+zhangzzh7@mail.sysu.edu.cn
+Abstract
+Neural solvers have demonstrated remarkable success in
+combinatorial optimization, often achieving better average
+quality within the same time limit in solution quality, and
+generalization. However, their efficacy deteriorates signifi-
+cantly when confronted with complex constraints that can-
+not be effectively managed through simple masking mech-
+anisms. To address this limitation, we introduce Univer-
+sal Constrained Preference Optimization (UCPO), a novel
+plug-and-play framework that seamlessly integrates prefer-
+ence learning into existing neural solvers via a specially de-
+signed loss function, without requiring architectural modifi-
+cations. UCPO embeds constraint satisfaction directly into a
+preference-based objective, eliminating the need for meticu-
+lous hyperparameter tuning. Leveraging a lightweight warm-
+start fine-tuning protocol, UCPO enables pre-trained models
+to consistently produce near-optimal, feasible solutions on
+challenging constraint-laden tasks, achieving exceptional per-
+formance with as little as 1% of the original training budget.
+Code — https://github.com/Birdie-Go/UCPO
+Extended version — https://arxiv.org/abs/2511.10148
+Introduction
+Combinatorial optimization forms the backbone of numer-
+ous mission-critical applications across modern industry and
+scientific computing. Despite the exponential complexity of
+their search spaces, these tasks demand near-optimal so-
+lutions within practical timeframes. Recent advancements
+in neural solvers, particularly those grounded in deep re-
+inforcement learning (DRL), have demonstrated significant
+superiority over classical heuristics in terms of solution
+quality, computational efficiency, and cross-domain gen-
+eralization. These solvers have achieved remarkable per-
+formance on canonical benchmarks such as the Travel-
+ing Salesman Problem (TSP), Capacitated Vehicle Routing
+Problem (CVRP), and Job-Shop Scheduling Problem (JSP).
+However, a critical challenge arises when deploying these
+methods on real-world instances with complex constraints
+*These authors contributed equally.
+†Corresponding author.
+Copyright © 2026, Association for the Advancement of Artificial
+Intelligence (www.aaai.org). All rights reserved.
+that cannot be effectively managed through simple masking
+mechanisms.
+In practical settings, hard constraints, e.g., non-negotiable
+customer time windows in vehicle routing (Liu et al. 2023)
+or draft-depth limitations in port logistics (Fadda et al.
+2023), may pose significant difficulties. Traditional neural
+solvers often struggle to balance feasibility and optimal-
+ity under such constraints. Existing approaches either rely
+on intricate masking strategies (Chen et al. 2024), which
+become computationally infeasible as the decision horizon
+grows, or employ Lagrangian penalty functions (Tang et al.
+2022; Bi et al. 2024), which transform the original single-
+objective problem into a bi-objective trade-off. The resulting
+Lagrange multipliers are notoriously sensitive to calibration,
+often leading to solutions that are either infeasible or subop-
+timal. This sensitivity necessitates careful, problem-specific
+tuning, which is both time-consuming and limits the univer-
+sal applicability of these methods.
+To address these limitations, we introduce Universal
+Constrained Preference Optimization (UCPO), a novel
+framework that leverages preference optimization (Meng,
+Xia, and Chen 2024; Pan et al. 2025; Liao et al. 2025) to
+handle hard constraints in combinatorial optimization tasks.
+Our framework introduces the following key innovations:
+1. Seamless Architectural Integration: UCPO can be ef-
+fortlessly attached to existing neural combinatorial op-
+timization (NCO) models without altering the under-
+lying architecture. We design a novel universal con-
+strained preference loss function, which includes fea-
+sibility margin loss, primal refinement loss, and dual
+exploration loss. This approach preserves the original
+model’s learned representations while significantly en-
+hancing its ability to handle complex constraints.
+2. Mask-Agnostic Constraint Enforcement: Unlike tra-
+ditional methods that rely on progressively refined or
+multi-step masks to ensure feasibility, UCPO employs
+a unified partial-order criterion. This criterion prioritizes
+feasible solutions over infeasible ones and favors infeasi-
+ble solutions with lower aggregate constraint violations.
+It also eliminates the need for hand-tuned or adaptively
+updated Lagrange multipliers of the relaxation problem.
+3. Efficient Warm-Start Adaptation: Utilizing a pre-
+trained checkpoint as a high-quality initializer, UCPO
+The Fortieth AAAI Conference on Artificial Intelligence (AAAI-26)
+36900
+performs lightweight fine-tuning through pairwise pref-
+erence sampling and gradient accumulation. This proto-
+col significantly reduces computational resource require-
+ments and enables rapid adaptation to new constraint sets
+without retraining from scratch.
+We conducted extensive experiments across four rep-
+resentative constrained benchmarks: Traveling Salesman
+Problem with Time Windows (TSPTW), Capacitated Ve-
+hicle Routing Problem with Time Windows (CVRPTW),
+Traveling Salesman Problem with Draft Limit (TSPDL),
+and Capacitated Vehicle Routing Problem with Time Win-
+dows and Limited Vehicles (CVRPTWLV). Each bench-
+mark involves intricate constraints that are notoriously dif-
+ficult to handle, such as time-windows and resource limi-
+tations. UCPO demonstrates exceptional performance com-
+pared to state-of-the-art neural methods, establishing it as a
+general, reusable, and highly efficient paradigm for handling
+hard constraints in neural combinatorial optimization.
+Related Works
+Neural solvers for combinatorial optimization can be
+broadly categorized into three principal classes: end-to-end
+constructive methods, iterative improvement methods, and
+non-autoregressive methods. This work primarily focuses on
+end-to-end constructive methods.
+End-to-end constructive methods. Initiated by Pointer
+Networks (Vinyals, Fortunato, and Jaitly 2015), this cate-
+gory generates solutions step-by-step using autoregressive
+decoding. Subsequent works such as the Attention Model
+(AM) (Kool, van Hoof, and Welling 2019) and H-TSP
+(Pan et al. 2023) enhance policy expressiveness through
+reinforcement learning and hierarchical decoding. POMO
+(Kwon et al. 2020) achieves a significant performance leap
+in small-scale TSP by leveraging solution space symme-
+tries to improve sample efficiency. SymNCO (Kim, Park,
+and Park 2022) adopts a similar strategy. MatNet (Kwon
+et al. 2021), ELG (Gao et al. 2024), and PolyNet (Hot-
+tung, Mahajan, and Tierney 2025) further improve accuracy
+for small instances through matrix distance calculations, lo-
+cal policy optimization, and solution diversity mechanisms.
+To handle large-scale problems, LEHD (Luo et al. 2023)
+and InViT (Fang et al. 2024) enhance representation capac-
+ity and decoding efficiency. GOAL (Drakulic, Michel, and
+Andreoli 2025), MTPOMO (Liu et al. 2024), and MVMoE
+(Zhou et al. 2024) pursue multi-task generalization. Notably,
+BOPO (Liao et al. 2025) and POCO (Pan et al. 2025) intro-
+duce preference-optimization concepts, offering novel pol-
+icy alignment strategies. However, these methods primarily
+rely on lightweight masking mechanisms, necessitating ad-
+hoc penalty functions or masking logics when handling ad-
+ditional constraints, thereby limiting their universality.
+Other paradigms. Iterative improvement methods (e.g.,
+DACT (Ma et al. 2021), NeuOpt (Ma, Cao, and Chee
+2023)) improve solutions via refinement loops, while non-
+autoregressive methods (e.g., DeepACO (Ye et al. 2023),
+DIFUSCO (Sun and Yang 2023)) aim to enhance infer-
+ence efficiency through ant colony or diffusion-based gen-
+eration. Notably, these paradigms also struggle with global
+constraints under the same masking limitations.
+When
+constraints
+are
+global,
+non-linear,
+or
+both,
+lightweight masking is often insufficient. Existing work
+tackles this via two main strategies.
+Lagrangian relaxation and penalty functions. A com-
+mon strategy involves augmenting the objective function
+with soft constraint penalties or employing two-stage train-
+ing to mitigate constraint violations (Tang et al. 2022; Chen
+et al. 2022; Bi et al. 2024). For instance, MUSLA (Chen
+et al. 2024) incorporates multi-step look-ahead features but
+is coupled to problem-specific characteristics, limiting its
+flexibility. PIP (Bi et al. 2024) combines Lagrange multipli-
+ers with one-step look-ahead masks to reduce infeasibility
+rates but struggles to balance feasibility and solution quality.
+These methods require careful tuning of Lagrange multipli-
+ers, which is sensitive to problem-specific parameters and
+may lead to suboptimal solutions.
+Exploration of feasible and infeasible regions. NeuOpt
+(Ma, Cao, and Chee 2023) guides exploration into infeasi-
+ble regions followed by k-opt iterative repair. NCG (Xia and
+Zhang 2024) adopts a column-generation paradigm to pre-
+dict the probability of constraint satisfaction for each col-
+umn. Both approaches require increased exploration budgets
+or the training of auxiliary probabilistic models, adding to
+the computational and implementation complexities.
+In summary, existing neural-based methods for combina-
+torial optimization face challenges in handling complex con-
+straints, often requiring problem-specific tuning and com-
+plex masking strategies. This motivates the need for a versa-
+tile, mask-free, and low-hyperparameter solution compatible
+with general-purpose neural solvers. Our UCPO framework
+addresses these limitations by offering an efficient and uni-
+versal approach to constrained combinatorial optimization.
+Preliminaries
+Lagrangian Methods
+Consider a generic combinatorial optimization problem of
+the form:
+min
+x∈X
+f(x)
+subject to
+gj(x) ≤0,
+j ∈J ,
+hk(x) = 0,
+k ∈K,
+where x = (x1, . . . , xn)⊤represents the decision variables,
+X ⊆Rn defines the feasible domain, f(x) is the objective
+function to be minimized, and gj(x) and hk(x) represent
+inequality and equality constraints, respectively.
+To handle constraints, we introduce non-negative La-
+grange multipliers λ = (λj)j∈J ≥0 and unconstrained
+multipliers µ = (µk)k∈K ∈R, and construct the La-
+grangian:
+L(x, λ, µ) = f(x) +
+X
+j∈J
+λjgj(x) +
+X
+k∈K
+µkhk(x).
+The dual function is defined as:
+θ(λ, µ) = inf
+x∈X L(x, λ, µ).
+36901
+Instance
+Constraints
+NCO model
+Solution 3
+Solution 1
+Solution 4
+Solution 5
+Solution 2
+Infeasible Solutions
+Solution 4
+Solution 5
+Solution 6
+Feasible Solutions
+Solution 3
+Solution 1
+Solution 2
+Sample
+Solution 1
+Solution 2
+Solution 1
+Solution 3
+≻
+≻
+≻
+≻
+≻
+≻
+Solution 5
+Solution 4
+Solution 4
+Solution 6
+Primal Refinement Loss
+Feasibility Margin Loss
+Dual Exploration Loss
+Training Loss
+Universal Constrained
+Preference Loss
+Solution 1
+Solution 1
+Solution 6
+Solution 5
+Forward Propagation
+Backward Propagation
+Best Feasible solution
+Best Infeasible solution
+Solution 6
+Sort
+≻
+Solution 1
+Solution 4
+Figure 1: Overview of the Universal Constrained Preference Optimization (UCPO) framework. The process begins by sampling
+candidate solutions from the base NCO model, followed by fine-tuning the model using Universal Constrained Preference Loss.
+To reduce computational complexity, the multipliers are
+often fixed at certain values (¯λ, ¯µ), transforming the dual
+problem into a single-level unconstrained optimization prob-
+lem:
+min
+x∈X
+
+f(x) + ¯λ⊤g(x) + ¯µ⊤h(x)
+	
+.
+This approach converts the original saddle-point problem
+over (x, λ, µ) into a single-variable minimization problem
+over x ∈X. As a result, any off-the-shelf unconstrained or
+model-free algorithm (e.g., REINFORCE (Williams 1992))
+can be directly applied without the need for an outer loop to
+update the multipliers. However, this simplicity comes at the
+cost of losing strict feasibility guarantees unless (¯λ, ¯µ) cor-
+responds to an optimal dual solution. In practice, the multi-
+pliers are treated as tunable “penalty coefficients”, enabling
+the generation of approximately feasible solutions through
+manual or heuristic adjustments.
+Preference Optimization Methods
+Given an instance x ∈X and a policy network with parame-
+ters θ, the policy πθ(· | x) generates N candidate solutions:
+Tx = {τi}N
+i=1 ∼πθ(· | x).
+For every ordered pair (τi, τj), we define the preference
+label as:
+yij = 1{f(x, τi) < f(x, τj)} ,
+where f(x, τ) denotes the objective value of solution τ on
+instance x. The symbol 1 indicates that τi is strictly better
+than τj.
+The Bradley–Terry model (Bradley and Terry 1952) trans-
+lates the objective gap into a preference probability:
+pθ(τi ≻τj | x) = σ
+ β · dθ(x, τi, τj)
+
+,
+where σ(·) is the logistic (sigmoid) function, dθ(x, τi, τj) =
+α
+
+log πθ(τi | x) −log πθ(τj | x)
+
+represents the log-
+likelihood difference, α > 0 is a temperature parameter, and
+β is an adaptive scaling factor (BOPO (Liao et al. 2025) sets
+β = f(x, τj)/f(x, τi), while POCO (Pan et al. 2025) simply
+fixes β = 1).
+Maximizing the likelihood over all preference pairs is
+equivalent to minimizing the loss:
+L(θ) = −Ex∼X
+1
+|Tx|2
+X
+i̸=j
+yij log pθ(τi ≻τj | x).
+Substituting the Bradley–Terry model yields the closed-
+form objective:
+L(θ) = −Ex∼X
+1
+|Tx|2
+X
+i̸=j
+yij log σ
+
+αβ
+
+log πθ(τi | x)
+−log πθ(τj | x)
+
+.
+Methodology
+To address complex constrained combinatorial optimization
+problems, we introduce Universal Constrained Preference
+Optimization (UCPO), a novel framework that seamlessly
+integrates preference learning into the combinatorial opti-
+mization workflow in a plug-and-play manner. Designed as
+a lightweight loss function, UCPO can be easily incorpo-
+rated into any existing RL-based solver without the need for
+extensive architectural modifications or complete retraining.
+This is achieved by leveraging a warm-start fine-tuning pro-
+cedure that utilizes existing pre-trained checkpoints, thereby
+significantly enhancing performance in constrained settings
+with minimal additional computational overhead.
+36902
+The overall architecture of UCPO is illustrated in Figure
+1. The detailed components are presented as follows.
+Constrained Preference Optimization Formulation
+Partial-Order Relation.
+Consider an instance x ∈X
+with constraint sets G = {gj(x) ≤0, j ∈J } and H =
+{hk(x) = 0, k ∈K}. The policy πθ(· | x) generates N can-
+didate solutions Tx = {τi}N
+i=1, some of which may violate
+the constraints. To address infeasible solutions, we introduce
+the indicator function:
+I(x, τ) =
+
+
+
+
+
+
+
+1,
+∃j ∈J : gj(x, τ) > 0 or
+∃k ∈K : hk(x, τ)̸ = 0,
+0,
+∀j ∈J : gj(x, τ) ≤0 and
+∀k ∈K : hk(x, τ) = 0.
+Here, I(x, τ) = 0 if and only if τ is strictly feasible. Us-
+ing the quadruple (τi, τj, I(x, τi), I(x, τj)), we define the
+partial order τi ≻τj if exactly one of the following condi-
+tions holds:
+
+
+
+I(x, τi) = I(x, τj) = 0 and f(x, τi) < f(x, τj),
+I(x, τi) = 0 and I(x, τj) = 1,
+I(x, τi) = I(x, τj) = 1 and L(x, τi, λ, µ) < L(x, τj, λ, µ),
+where
+L(x, τ, λ, µ) = f(x, τ) +
+X
+j∈J
+λjgj(x, τ) +
+X
+k∈K
+µkhk(x, τ)
+is the Lagrangian with non-negative multipliers λ
+=
+(λj)j∈J ≥0 and unconstrained multipliers µ = (µk)k∈K ∈
+R. This hierarchy prioritizes: 1) lower objective values
+among feasible solutions, 2) feasible solutions over infeasi-
+ble ones, and 3) lower Lagrangian values among infeasible
+solutions.
+Bradley–Terry Model.
+Following the typical formaliza-
+tion of preference optimization, we convert the partial order
+into a preference probability. For a solution pair (τi, τj) and
+instance x, the preference probability is defined as:
+pθ(τi ≻τj | x) = σ(β [log πθ(τi | x) −log πθ(τj | x)]) ,
+where log πθ(τ | x) is the log-likelihood of τ under the
+policy πθ, σ(·) is the logistic sigmoid function, and β is
+an adaptive scaling factor. Following the parameterization
+adopted in BOPO (Liao et al. 2025), we dispense with the
+temperature coefficient α and retain only the scalar β. This
+formulation efficiently captures the relative preference be-
+tween solutions while reducing computational complexity.
+Design of Universal Constrained Preference Loss
+To address environments with complex constraints and
+sparse feasible solutions, we design three loss components,
+i.e., LDual, LMargin and LPrimal, that progressively guide the
+policy from infeasible exploration to high-quality feasi-
+ble solution learning. Although not strictly mutually exclu-
+sive, these losses follow a natural progression: Dual Explo-
+ration →Feasibility Margin →Primal Refinement, which
+enables the model to balance constraint satisfaction with ob-
+jective optimality in a principled manner.
+Given a problem instance and its constraints, the pol-
+icy network concurrently samples N complete trajectories.
+While this yields
+ N
+2
+
+pairwise preferences in theory, we in-
+stead enforce the previously established partial order to con-
+struct a single ranked list:
+τ1 ≻τ2 ≻· · · ≻τN,
+which immediately partitions the candidates into
+T T = {τ ∈Tx | I(x, τ) = 0}
+(feasible),
+T F = {τ ∈Tx | I(x, τ) = 1}
+(infeasible).
+Either subset may be empty, especially during early train-
+ing stages. Our loss design guides the policy toward strict
+feasibility while refining objective quality by activating
+three terms depending on the realization of T T and T F .
+Dual Exploration Loss LDual.
+Activated only when T T =
+∅, i.e., all sampled trajectories are infeasible. Let τ◦=
+arg minτ∈TF L(x, τ, λ, µ) be the “least-infeasible” solution
+under particular Lagrange multiplier. We contrast τ◦against
+the remaining infeasible trajectories to guide exploration to-
+ward lower constraint violation:
+LDual(θ) = −Ex∼X
+1
+|T F | −1
+X
+τ∈TF \{τ◦}
+log σ
+
+βDual
+log πθ(τ◦|x) −log πθ(τ |x)
+
+,
+(1)
+with βDual = L(x, τ, λ, µ)/L(x, τ◦, λ, µ) ≥1.
+It is worth noting that LDual is activated only during the
+very beginning of training, while no feasible solution has
+yet been found. Once feasible solutions are sampled (via ex-
+ploration guided by the Lagrangian-based ranking), the loss
+is deactivated in favor of LMargin and LPrimal, which operate
+solely within the feasible region and are multiplier-agnostic.
+Consequently, the long-term policy behavior is dominated
+by constraint-compliant optimization, decoupling final per-
+formance from the initial (λ, µ).
+Feasibility Margin Loss LMargin.
+Activated when both
+T T and T F are non-empty. Let τ⋆= arg minτ∈TT f(x, τ)
+be the best feasible solution. We contrast τ⋆against every
+infeasible trajectory τ ∈T F :
+LMargin(θ) = −Ex∼X
+1
+|T F |
+X
+τ∈TF
+log σ
+
+βMargin
+log πθ(τr⋆|x) −log πθ(τ |x)
+
+,
+(2)
+with adaptive scaling βMargin = L(x, τ, λ, µ)/f(x, τ⋆) > 1.
+The Lagrangian L smooths the transition into the feasible
+region, eliminating gradient discontinuities. This loss simul-
+taneously attracts the policy toward the current best feasible
+solution and repels it from all infeasible ones.
+Primal Refinement Loss LPrimal.
+Activated when |T T | ≥
+2. We refine the policy within the feasible region by pairing
+τ⋆with every other feasible solutions τ ∈T T \ {τ⋆}:
+LPrimal(θ) = −Ex∼X
+1
+|T T | −1
+X
+τ∈TT \{τ⋆}
+log σ
+
+βPrimal
+log πθ(τ⋆|x) −log πθ(τ |x)
+
+,
+(3)
+36903
+Algorithm 1: UCPO Training Protocol.
+Require: Epochs Eft, batch size B, data distribution S,
+NCO pretrained checkpoint θ0.
+1: Initialize θ ←θ0
+2: for epoch e = 1 to Eft do
+3:
+for batch b = 1 to ⌈Eft/B⌉do
+4:
+
+⟨xi, Gi, Hi⟩
+	B
+i=1 ←DataGenerator(S)
+5:
+for each x in mini-batch do
+6:
+Sample τ(1...N) ∼NCO
+ ⟨xi, Gi, Hi⟩
+
+7:
+Sort and split solutions
+8:
+T T ←{τ ∈Tx | I(x, τ) = 0}
+9:
+T F ←{τ ∈Tx | I(x, τ) = 1}
+10:
+Compute LDual(θ), LMargin(θ), LPrimal(θ)
+11:
+L(θ) = LDual(θ) + LMargin(θ) + LPrimal(θ)
+12:
+Update parameters θ ←θ −α∇θL(θ)
+13:
+end for
+14:
+end for
+15: end for
+scaled by βPrimal = f(x, τ)/f(x, τ⋆) ≥1. Empirically, we
+observe that βMargin > βPrimal in most instances; the larger
+gradient on the constraint term implicitly prioritizes feasi-
+bility. If | T T |≤1, we simply set LPrimal = 0.
+Overall Training Objective.
+The policy network is opti-
+mized with the composite loss,
+L(θ) = LDual(θ) + LMargin(θ) + LPrimal(θ),
+(4)
+where the active terms are automatically selected from cold
+start to high performance, ensuring stable end-to-end train-
+ing across all stages.
+Light Warm-Start Fine-Tuning
+The training procedure of UCPO, as formalized in Algo-
+rithm 1, is designed to seamlessly integrate with existing
+NCO frameworks. It achieves full architectural compatibil-
+ity by neither modifying the network topology nor introduc-
+ing additional learnable parameters. This design allows any
+pre-trained checkpoint, especially those already fine-tuned
+for constrained settings, to serve as a high-quality initializer.
+Given a pre-trained policy πθ0, UCPO performs fine-
+tuning for a limited number of epochs Eft ≪Ebase, where
+Ebase denotes the original training epochs. The fine-tuning
+objective minimizes the composite loss defined in Eq. (4)
+through gradient updates. This process simultaneously en-
+hances constraint satisfaction and solution quality.
+The warm-start protocol achieves two key advantages:
+• Few-Overhead Transfer: By preserving architectural
+invariance, UCPO ensures that the computational com-
+plexity of the pre-trained model remains unchanged.
+Specifically, the memory footprint and inference latency
+of the fine-tuned model are equivalent to those of the pre-
+trained model.
+• Rapid Convergence: Empirically, UCPO reaches stable
+performance within Eft = ⌈0.01Ebase⌉to ⌈0.05Ebase⌉
+epochs. This efficiency enables UCPO to achieve signifi-
+cant performance improvements with less than 5% of the
+original training budget.
+Experiments
+Experimental Setups
+Datasets.
+Experiments target four canonical constraints:
+time windows, draft limits, vehicle capacity, and fleet size.
+Four benchmark tasks are examined accordingly: TSPTW,
+TSPDL, CVRPTW, and CVRPTWLV. For TSPTW and
+TSPDL, we adopt the generation protocol proposed by
+PIP and create instances at three difficulty levels—Easy,
+Medium, and Hard—based on constraint-satisfaction hard-
+ness. CVRPTW and CVRPTWLV follow the setting intro-
+duced by JAMPR (Falkner and Schmidt-Thieme 2020) and
+are generated uniformly at the Hard level. All datasets are
+fixed at 50 and 100 nodes. Each validation set comprises ex-
+actly 10,000 instances.
+Baselines.
+UCPO is evaluated against three representa-
+tive algorithmic families: 1) Problem-specific heuristics, ex-
+emplified by LKH3 (Helsgaun 2017), which are meticu-
+lously tailored to each VRP variant. 2) General-purpose RL-
+NCO, represented by POMO (Kwon et al. 2020) and SLIM
+(Corsini et al. 2024), that employs reinforcement learning to
+deliver universal solvers. 3) Constraint-specialized models,
+including PIP (Bi et al. 2024) and its distilled variant PIP-D.
+Benchmark Setup and Base Models.
+UCPO is warm-
+started into three backbone models: POMO, PIP, and PIP-
+D. All hyper-parameters are kept identical to the original
+publications, and the publicly released best checkpoints are
+used without modification. Training data distributions, net-
+work architectures, and optimizer configurations remain ex-
+actly the same. For Lagrangian-based models, the Lagrange
+multiplier is fixed to 1, consistent with the reported val-
+ues. During warm-start, POMO and PIP are fine-tuned for
+up to 500 epochs; PIP-D is trained for 100 epochs. These
+epoch counts are jointly determined by convergence curves
+and training-time budgets. Note that the original checkpoints
+were obtained after 10,000 epochs, so warm-start training
+amounts to only 1%–5% of the total previous computation.
+To provide a comprehensive evaluation, UCPO is addition-
+ally cold-started on POMO without pre-trained checkpoint.
+All training and inference are executed on NVIDIA GeForce
+GTX 1080 Ti GPUs and Intel(R) Xeon(R) CPU E5-2640 v4
+@ 2.40GHz CPUs.
+Evaluation.
+Inference follows a unified protocol: 1)
+Sampling-based decoding: the number of samples equals the
+instance size; 8× data augmentation is enabled. 2) Metrics
+include the infeasible rate on the validation set, the average
+objective value of feasible solutions and the average opti-
+mality gap with respect to LKH3. An instance is regarded
+as feasible if at least one sampled solution satisfies all con-
+straints; the solution with the smallest objective among the
+feasible ones is returned. 3) Inference time and memory us-
+age are not reported, as they remain consistent with the back-
+bone models.
+Main Results
+The performance of UCPO on various benchmark tasks is
+summarized in Tables 1–3. After fine-tuning with UCPO,
+the NCO models based on different backbones, including
+36904
+Method
+TSPTW-50
+TSPTW-100
+Easy
+Medium
+Hard
+Easy
+Medium
+Hard
+Inst.% Obj. Gap% Inst.%
+Obj. Gap% Inst.%
+Obj. Gap% Inst.%
+Obj. Gap% Inst.%
+Obj. Gap% Inst.%
+Obj. Gap%
+LKH3
+0.00 7.31
+0.00
+0.00 13.02
+0.00
+0.12 25.61
+0.00
+0.00 10.21
+0.00
+0.00 18.74
+0.00
+0.07 51.24
+0.00
+POMO
+0.00 7.54
+3.15
+3.77 13.68
+5.07 35.25 26.22
+2.38
+0.00 10.83
+6.07
+0.12 20.78 10.89 100.00
+—
+—
+UCPO (POMO)
+0.00 7.41
+1.30
+0.08 13.26
+1.86
+1.32 25.75
+0.55
+0.00 10.54
+3.25
+0.01 19.84
+5.89 100.00
+—
+—
+UCPO* (POMO)
+0.00 7.36
+0.64
+0.15 13.19
+1.31
+0.13 25.61
+0.01
+0.00 10.58
+3.66
+0.00 19.93
+6.35
+0.87 51.25
+0.02
+PIP
+0.00 7.50
+2.60
+0.90 13.40
+2.92
+2.67 25.66
+0.20
+0.00 10.57
+3.53
+0.19 19.61
+4.64
+16.27 51.42
+0.35
+UCPO (PIP)
+0.00 7.39
+1.11
+0.04 13.14
+0.89
+0.76 25.61
+0.00
+0.00 10.41
+1.94
+0.00 19.17
+2.27
+5.01 51.28
+0.07
+PIP-D
+0.00 7.49
+2.46
+0.65 13.45
+3.30
+3.07 25.69
+0.31
+0.00 10.66
+4.41
+0.03 19.79
+5.60
+6.48 51.39
+0.29
+UCPO (PIP-D)
+0.00 7.42
+1.49
+0.05 13.18
+1.23
+1.07 25.61
+0.00
+0.00 10.53
+3.11
+0.01 19.32
+3.08
+2.99 51.24
+0.00
+Table 1: Performance on TSPTW-50 and TSPTW-100. Bars indicate no feasible solution. UCPO* represents UCPO with cold-
+start training.
+Method
+Medium (TSPDL-50)
+Hard (TSPDL-50)
+Inst.%
+Obj.
+Gap%
+Inst.%
+Obj.
+Gap%
+LKH3
+0.00 10.87
+0.00
+0.00 13.30
+0.00
+POMO
+12.52 10.98
+1.01
+29.25 13.85
+4.10
+UCPO (POMO)
+4.00 11.04
+1.54
+0.01 13.48
+1.35
+UCPO*(POMO)
+0.07 11.09
+2.03
+0.00 13.54
+1.83
+PIP
+0.43 11.22
+3.22
+2.10 13.66
+2.71
+UCPO (PIP)
+0.02 11.06
+1.73
+0.01 13.48
+1.36
+PIP-D
+0.37 11.26
+3.59
+0.82 13.80
+3.76
+UCPO (PIP-D)
+0.01 11.10
+2.15
+0.04 13.56
+1.92
+Method
+Medium (TSPDL-100)
+Hard (TSPDL-100)
+Inst.%
+Obj.
+Gap%
+Inst.%
+Obj.
+Gap%
+LKH3
+0.00 16.39
+0.00
+0.00 20.70
+0.00
+POMO
+32.16 17.11
+4.39
+99.85 20.95
+1.21
+UCPO (POMO)
+0.02 17.29
+5.49
+18.84 21.40
+3.38
+UCPO*(POMO)
+0.03 17.27
+5.38
+0.01 22.37
+8.06
+PIP
+0.38 17.71
+8.05
+20.66 22.30
+7.73
+UCPO (PIP)
+0.02 17.19
+4.86
+0.04 22.40
+8.22
+PIP-D
+0.23 17.84
+8.85
+7.91 22.84
+10.34
+UCPO (PIP-D)
+0.02 17.44
+6.42
+0.01 22.42
+8.30
+Table 2: Performance on TSPDL-50 and TSPDL-100.
+POMO, PIP, and PIP-D, consistently achieve substantial im-
+provements in both feasibility rate and objective value across
+diverse test sets.
+As illustrated in Table 1, UCPO achieves remarkable per-
+formance on TSPTW instances. First, it significantly reduces
+infeasibility rates. On the Easy and Medium sets, UCPO
+attains near-zero infeasibility rates (all below 0.15%), sig-
+nificantly outperforming PIP (0.90%) and PIP-D (0.65%).
+On the Hard set, UCPO* (POMO) reduces POMO’s in-
+feasibility rate from 100% to 0.87%. Second, UCPO sub-
+stantially improves solution quality. On TSPTW-50-Easy,
+UCPO* (POMO) reduces the optimality gap from 3.15%
+to 0.64%, achieving superior performance compared to all
+other methods. On TSPTW-100-Easy, UCPO (PIP) lowers
+Method
+CVRPTW50
+CVRPTWLV50
+Inst. % Obj.
+Inst. %
+Obj.
+POMO
+0.20 % 14.13
+3.26 %
+14.20
+UCPO (POMO)
+0.09 % 13.58
+0.98 %
+13.61
+UCPO* (POMO)
+0.75 % 13.50
+2.20 %
+13.56
+SLIM
+0.15 % 14.10
+2.74 %
+14.15
+UCPO (SLIM)
+0.11 % 13.51
+0.85 %
+13.59
+Table 3: Performance on CVRPTW50 and CVRPTWLV50.
+Method
+Medium
+Hard
+Inst. % Gap % Inst. % Gap %
+LKH3
+0.00 %
+0.00 %
+0.12 %
+0.00 %
+UCPO-PIP (λ=0.5)
+0.01 %
+0.95 %
+0.24 %
+0.00 %
+UCPO-PIP (λ=1)
+0.04 %
+0.89 %
+0.76 %
+0.00 %
+UCPO-PIP (λ=2)
+0.03 %
+0.94 %
+0.78 % -0.01 %
+UCPO-POMO (λ=0.5)
+0.03 %
+1.97 %
+1.42 %
+0.61 %
+UCPO-POMO (λ=1)
+0.08 %
+1.86 %
+1.32 %
+0.55 %
+UCPO-POMO (λ=2)
+0.09 %
+1.87 %
+1.77 %
+0.61 %
+Table 4: Ablation on TSPTW-50 with different λ values.
+the gap to 1.94%, outperforming PIP’s 3.53%. Third, UCPO
+exhibits strong generalization and convergence across differ-
+ent backbones. It consistently enhances performance across
+various policy networks (POMO, PIP, PIP-D), reducing the
+performance gap between baseline models. For example,
+UCPO (PIP) ranks first on four out of six subsets. Fourth,
+UCPO* achieves substantial infeasibility reduction (e.g.,
+from 16.27% to 0.87% on TSPTW-100-Hard), although it
+requires significantly more training time to converge.
+Tables 2 and 3 further demonstrate UCPO’s consistent
+improvements in feasibility and objective values over base-
+line methods. On TSPDL-100-Hard, UCPO* (POMO) re-
+duces infeasibility from 99.85% to 0.01%, achieving better
+trade-offs. Even in cold-start mode on CVRPTW, UCPO*
+achieves the best objective values (13.50 vs. 14.13), show-
+36905
+Loss
+Medium
+Hard
+Feasibility
+Primal
+Dual
+Inst. % Gap %
+Inst. % Gap %
+✓
+0.29 % 1.87 %
+1.74 % 0.64 %
+✓
+0.30 % 1.84 %
+1.91 % 0.62 %
+✓
+100.00 %
+— % 100.00 %
+— %
+✓
+✓
+0.21 % 1.87 %
+1.94 % 0.59 %
+✓
+✓
+0.14 % 1.90 %
+1.53 % 0.62 %
+✓
+✓
+0.19 % 1.90 %
+2.19 % 0.62 %
+✓
+✓
+✓
+0.08 % 1.86 %
+1.32 % 0.55 %
+✓
+✓
+100.00 %
+— % 100.00 %
+— %
+✓
+✓
+✓
+0.08 % 1.31 %
+1.61 % 0.01 %
+Table 5: Ablation of loss terms on TSPTW-50. The upper
+pane presents results obtained with warm-started models;
+the lower pane corresponds to models trained from scratch.
+casing its strong generalization capability under hard con-
+straints.
+Sensitivity Analysis
+To verify the robustness of UCPO with respect to the La-
+grange multiplier λ, we conduct experiments on 50-node
+TSPTW instances on both Medium and Hard levels. Using
+POMO and PIP as base models, we train and evaluate with
+λ ∈{0.5, 1, 2}.
+As shown in Table 4, the maximal deviations in infea-
+sibility rate and objective gap across different λ are merely
+0.54% and 0.11%, respectively. Moreover, neither metric ex-
+hibits a monotonic trend with respect to λ. The observed
+variations can be attributable to training stochasticity. These
+results indicate that UCPO exhibits minimal sensitivity to its
+sole hyperparameter λ, underscoring its exceptional param-
+eter robustness. This characteristic is particularly significant
+in practical applications, as it eliminates the need for metic-
+ulous hyperparameter tuning and enhances the general ap-
+plicability of UCPO across diverse constrained optimization
+scenarios.
+We further train and evaluate with four random seeds
+{2023, 2024, 2025, 2026}, achieving standard deviations
+below 0.01%, consistently outperforming existing methods.
+Ablation Studies
+We conduct systematic ablations to assess the contributions
+of the three components of our universal constrained loss
+function and the impact of warm-start training epochs.
+As shown in Table 5, experiments on 50-node TSPTW in-
+stances (Medium and Hard difficulty levels) yield two key
+insights. 1) Both the Feasibility Margin Loss and Primal
+Refinement Loss are essential for achieving optimal perfor-
+mance. Removing either component results in a measurable
+decline in feasibility or solution quality, whereas combining
+these two losses consistently delivers superior outcomes. 2)
+The Dual Exploration Loss, although inactive during warm-
+start training (due to the high feasibility of generated tra-
+jectories), proves indispensable in cold-start scenarios, en-
+abling rapid convergence to feasible solutions.
+(a) Medium
+(b) Hard
+Figure 2: Post-training values across two difficulty levels
+(Medium, Hard).
+Figure 2 further illustrates the efficiency of our warm-
+start approach. After further training from converged POMO
+or PIP checkpoints yields minimal improvements, UCPO
+achieves significant performance gains after just 100 warm-
+start steps, representing merely 1% of the original training
+budget.
+Conclusion
+We introduce Universal Constrained Preference Optimiza-
+tion (UCPO), a novel framework that addresses the feasibil-
+ity–performance trade-off in neural combinatorial optimiza-
+tion (NCO) with complex constraints. UCPO is designed as
+a plug-and-play module that can be integrated with any ex-
+isting NCO model without requiring architectural changes
+or manual tuning of Lagrange multipliers. By leveraging
+a warm-start fine-tuning procedure, UCPO achieves near-
+100% feasibility and near-optimal solutions on complex
+constrained tasks with just 1%–5% of the original training
+budget.
+For future research, we propose three directions: 1) de-
+veloping mechanisms for UCPO to handle dynamic con-
+straints in real-time applications, 2) extending UCPO with
+meta-learning capabilities to enable rapid adaptation to un-
+seen constraints, and 3) decoupling the constraint module to
+allow a single base model to generalize across diverse con-
+straint settings through module swapping.
+36906
+Acknowledgments
+This work is supported by the National Natural Sci-
+ence Foundation of China (No. 62472461), the Guang-
+dong Basic and Applied Basic Research Foundation (No.
+2025A1515010129, 2024A1515010871).
+References
+Bi, J.; Ma, Y.; Zhou, J.; Song, W.; Cao, Z.; Wu, Y.; and
+Zhang, J. 2024. Learning to Handle Complex Constraints
+for Vehicle Routing Problems. In Advances in Neural Infor-
+mation Processing Systems.
+Bradley, R. A.; and Terry, M. E. 1952. Rank analysis of
+incomplete block designs: I. the method of paired compar-
+isons. Biometrika, 39(3/4): 324–345.
+Chen, J.; Gong, Z.; Liu, M.; Wang, J.; Yu, Y.; and Zhang,
+W. 2024. Looking ahead to avoid being late: Solving hard-
+constrained traveling salesman problem.
+arXiv preprint
+arXiv:2403.05318.
+Chen, J.; Huang, H.; Zhang, Z.; and Wang, J. 2022. Deep
+reinforcement learning with two-stage training strategy for
+practical electric vehicle routing problem with time win-
+dows.
+In International Conference on Parallel Problem
+Solving from Nature.
+Corsini, A.; Porrello, A.; Calderara, S.; and Dell’Amico, M.
+2024. Self-labeling the job shop scheduling problem. Ad-
+vances in Neural Information Processing Systems.
+Drakulic, D.; Michel, S.; and Andreoli, J.-M. 2025. GOAL:
+A Generalist Combinatorial Optimization Agent Learner.
+International Conference on Learning Representations.
+Fadda, P.; Mancini, S.; Serra, P.; and Fancello, G. 2023. The
+Heterogeneous Fleet Vehicle Routing Problem with Draft
+Limits. Computers Operations Research, 149: 106024.
+Falkner, J. K.; and Schmidt-Thieme, L. 2020. Learning to
+solve vehicle routing problems with time windows through
+joint attention. arXiv preprint arXiv:2006.09100.
+Fang, H.; Song, Z.; Weng, P.; and Ban, Y. 2024.
+IN-
+ViT: A Generalizable Routing Problem Solver with Invari-
+ant Nested View Transformer. In Proceedings of the 41st
+International Conference on Machine Learning.
+Gao, C.; Shang, H.; Xue, K.; Li, D.; and Qian, C. 2024. To-
+wards generalizable neural solvers for vehicle routing prob-
+lems via ensemble with transferrable local policy. In Pro-
+ceedings of the 43rd International Joint Conference on Arti-
+ficial Intelligence.
+Helsgaun, K. 2017.
+An extension of the Lin-Kernighan-
+Helsgaun TSP solver for constrained traveling salesman and
+vehicle routing problems. Roskilde: Roskilde University, 12:
+966–980.
+Hottung, A.; Mahajan, M.; and Tierney, K. 2025. PolyNet:
+Learning Diverse Solution Strategies for Neural Combinato-
+rial Optimization. In The 13th International Conference on
+Learning Representations.
+Kim, M.; Park, J.; and Park, J. 2022. Sym-nco: Leverag-
+ing symmetricity for neural combinatorial optimization. Ad-
+vances in Neural Information Processing Systems.
+Kool, W.; van Hoof, H.; and Welling, M. 2019. Attention,
+Learn to Solve Routing Problems! In International Confer-
+ence on Learning Representations.
+Kwon, Y.-D.; Choo, J.; Kim, B.; Yoon, I.; Gwon, Y.; and
+Min, S. 2020. Pomo: Policy optimization with multiple op-
+tima for reinforcement learning. Advances in Neural Infor-
+mation Processing Systems.
+Kwon, Y.-D.; Choo, J.; Yoon, I.; Park, M.; Park, D.; and
+Gwon, Y. 2021. Matrix encoding networks for neural combi-
+natorial optimization. Advances in Neural Information Pro-
+cessing Systems.
+Liao, Z.; Chen, J.; Wang, D.; Zhang, Z.; and Wang, J.
+2025. BOPO: Neural Combinatorial Optimization via Best-
+anchored and Objective-guided Preference Optimization. In
+42nd International Conference on Machine Learning.
+Liu, F.; Lin, X.; Wang, Z.; Zhang, Q.; Xialiang, T.; and
+Yuan, M. 2024.
+Multi-task learning for routing problem
+with cross-problem zero-shot generalization.
+In Proceed-
+ings of the 30th ACM SIGKDD Conference on Knowledge
+Discovery and Data Mining, 1898–1908.
+Liu, X.; Chen, Y.-L.; Por, L. Y.; and Ku, C. S. 2023.
+A
+Systematic Literature Review of Vehicle Routing Problems
+with Time Windows. Sustainability, 15(15).
+Luo, F.; Lin, X.; Liu, F.; Zhang, Q.; and Wang, Z. 2023. Neu-
+ral combinatorial optimization with heavy decoder: Toward
+large scale generalization. Advances in Neural Information
+Processing Systems.
+Ma, Y.; Cao, Z.; and Chee, Y. M. 2023. Learning to search
+feasible and infeasible regions of routing problems with flex-
+ible neural k-opt. Advances in Neural Information Process-
+ing Systems.
+Ma, Y.; Li, J.; Cao, Z.; Song, W.; Zhang, L.; Chen, Z.; and
+Tang, J. 2021. Learning to iteratively solve routing prob-
+lems with dual-aspect collaborative transformer. Advances
+in Neural Information Processing Systems.
+Meng, Y.; Xia, M.; and Chen, D. 2024. Simpo: Simple pref-
+erence optimization with a reference-free reward. Advances
+in Neural Information Processing Systems.
+Pan, M.; Lin, G.; Luo, Y.-W.; Zhu, B.; Dai, Z.; Sun, L.; and
+Yuan, C. 2025. Preference Optimization for Combinatorial
+Optimization Problems. In 42nd International Conference
+on Machine Learning.
+Pan, X.; Jin, Y.; Ding, Y.; Feng, M.; Zhao, L.; Song, L.; and
+Bian, J. 2023. H-tsp: Hierarchically solving the large-scale
+traveling salesman problem.
+In Proceedings of the AAAI
+Conference on Artificial Intelligence.
+Sun, Z.; and Yang, Y. 2023. Difusco: Graph-based diffusion
+solvers for combinatorial optimization. Advances in Neural
+Information Processing Systems.
+Tang, Q.; Kong, Y.; Pan, L.; and Lee, C. 2022. Learning
+to solve soft-constrained vehicle routing problems with la-
+grangian relaxation. arXiv preprint arXiv:2207.09860.
+Vinyals, O.; Fortunato, M.; and Jaitly, N. 2015. Pointer net-
+works. Advances in Neural Information Processing Systems.
+36907
+Williams, R. J. 1992. Simple statistical gradient-following
+algorithms for connectionist reinforcement learning.
+Ma-
+chine Learning, 8(3): 229–256.
+Xia, Y.; and Zhang, X. 2024. A Neural Column Genera-
+tion Approach to the Vehicle Routing Problem with Two-
+Dimensional Loading and Last-In-First-Out Constraints. In
+International Joint Conference on Artificial Intelligence.
+Ye, H.; Wang, J.; Cao, Z.; Liang, H.; and Li, Y. 2023. Deep-
+ACO: Neural-enhanced ant systems for combinatorial opti-
+mization. Advances in Neural Information Processing Sys-
+tems.
+Zhou, J.; Cao, Z.; Wu, Y.; Song, W.; Ma, Y.; Zhang, J.; and
+Xu, C. 2024. MVMoE: Multi-Task Vehicle Routing Solver
+with Mixture-of-Experts.
+In International Conference on
+Machine Learning.
+36908

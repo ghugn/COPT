@@ -1,0 +1,350 @@
+\documentclass[11pt,a4paper]{article}
+
+% Compile with pdfLaTeX on Overleaf.
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage[vietnamese]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage{geometry}
+\geometry{top=2.2cm,bottom=2.2cm,left=2.5cm,right=2.5cm}
+
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{titling}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage[numbers,sort&compress]{natbib}
+
+\definecolor{coptblue}{HTML}{2667A8}
+\definecolor{proposalorange}{HTML}{D97706}
+\definecolor{softgray}{HTML}{F3F4F6}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=coptblue,
+    citecolor=coptblue,
+    urlcolor=coptblue
+}
+
+\newcommand{\method}{\textsc{Adaptive-OCS}}
+\newcommand{\hit}{\operatorname{Hit}}
+\newcommand{\hitk}{\mathrm{Hit@}k}
+\newcommand{\TopK}{\operatorname{TopK}}
+\newcommand{\mc}{\operatorname{MC}}
+\newcommand{\mis}{\operatorname{MIS}}
+
+\pretitle{\begin{center}\Large\bfseries}
+\posttitle{\par\end{center}\vskip 0.5em}
+\preauthor{\begin{center}\normalsize}
+\postauthor{\par\end{center}}
+\predate{\begin{center}\normalsize}
+\postdate{\par\end{center}\vskip 0.5em}
+
+\title{%
+    Tập đề xuất thích ứng cho tìm kiếm Maximum Clique chính xác\\[0.25em]
+    \large Học tập tiếp diễn tối ưu từ đồ thị nhỏ sang đồ thị lớn
+}
+\author{%
+    \textbf{Sinh viên:} [Điền họ tên]\\
+    \textbf{Mentor:} [Điền tên mentor]\\
+    \textbf{Đơn vị:} [Điền đơn vị]
+}
+\date{\today}
+
+\begin{document}
+
+\maketitle
+\vspace{-1.2em}
+
+\begin{abstract}
+Các mô hình neural combinatorial optimization thường đạt kết quả tốt trên phân phối huấn luyện nhưng suy giảm đáng kể khi chuyển từ đồ thị tổng hợp nhỏ sang các đồ thị lớn và khác phân phối. Đề xuất này nghiên cứu một giả thuyết cụ thể cho bài toán Maximum Clique: ngay cả khi đỉnh được mô hình xếp hạng cao nhất không dẫn tới nghiệm tối ưu, một tập nhỏ các đỉnh xếp hạng cao có thể vẫn chứa ít nhất một \emph{optimal continuation}---một lựa chọn cho phép trạng thái tìm kiếm hiện tại tiếp tục mở rộng thành maximum clique. Thay vì học một quyết định đơn, chúng tôi đề xuất học tập các tiếp diễn tối ưu từ những trạng thái được giải chính xác trên đồ thị nhỏ, sau đó điều chỉnh kích thước tập đề xuất theo độ bất định của mô hình. Tập đề xuất chỉ quyết định thứ tự thăm nhánh; mọi phép cắt nhánh vẫn dựa trên upper bound đúng và các nhánh ngoài tập này được giữ lại làm fallback, nhờ đó không làm mất tính chính xác của solver.
+
+Một thí nghiệm thăm dò với checkpoint COPT huấn luyện trên RB-small cho thấy việc tăng số điểm khởi tạo từ $k=1$ lên $k=50$ cải thiện mean best-known ratio trên năm DIMACS instances từ $61.8\%$ lên $81.8\%$. Hiệu ứng phụ thuộc mạnh vào instance: C500.9 và p\_hat300-2 bão hòa ngay tại $k=1$, trong khi MANN\_a27 tăng từ 27 lên 117. Quan sát này chưa chứng minh rằng top-$k$ thật sự bao phủ một nhánh tối ưu hay giúp tăng tốc exact search, nhưng cung cấp động lực thực nghiệm cho tập đề xuất thích ứng thay vì top-1 hoặc fixed-$k$. Nghiên cứu sẽ đo trực tiếp tỷ lệ trạng thái mà top-$k$ chứa ít nhất một nhánh còn dẫn tới optimum (gọi là $\hitk$), mức thu gọn tập ứng viên, time-to-best, số search nodes và time-to-proof trên dữ liệu tổng hợp cùng DIMACS.
+\end{abstract}
+
+\noindent\textbf{Từ khóa:} Maximum Clique, graph neural network, learning to search, optimal continuation, adaptive proposal, exact solver, small-to-large generalization.
+
+\section{Bối cảnh và động lực}
+
+Maximum Clique là bài toán tìm tập đỉnh lớn nhất đôi một kề nhau. Bài toán NP-hard này vừa là benchmark kinh điển, vừa xuất hiện trong phân tích mạng, tin sinh học và các bài toán tương thích cặp. Các exact solver hiện đại thường sử dụng branch-and-bound, vertex ordering và coloring upper bound; hiệu năng phụ thuộc mạnh vào thứ tự mở nhánh và chất lượng incumbent tìm được sớm \citep{prosser2012exact}.
+
+COPT-MT học biểu diễn chung cho nhiều bài toán tối ưu tổ hợp trên đồ thị và cho thấy khả năng chuyển giao giữa MIS, MVC và Maximum Clique \citep{canturk2026copt}. Với quan hệ
+\begin{equation}
+    \mc(G)=\mis(\overline{G}),
+\end{equation}
+một checkpoint MIS có thể được dùng zero-shot để tạo ranking cho các đỉnh của bài toán Maximum Clique. Tuy nhiên, validation tốt trên RB-small không đảm bảo ranking tốt trên DIMACS: cấu trúc, kích thước và mật độ đồ thị thay đổi mạnh.
+
+Các công trình trước đã dùng multi-seed decoding để tạo nhiều nghiệm clique từ một ranking \citep{min2022hybrid}, và learned vertex ordering đã được tích hợp vào branch-and-bound \citep{min2025ordering}. Gần đây, ASAP lập luận rằng proposal set có thể bền vững hơn top-1 action dưới distribution shift trong các bài toán routing và bin packing \citep{fang2026asap}. Vì vậy, chỉ ``dùng top-$k$ đỉnh của COPT'' không đủ mới. Khoảng trống mà đề xuất này nhắm tới là: (i) học trực tiếp \emph{tập} các lựa chọn còn dẫn tới optimum tại từng search state; (ii) kiểm tra khả năng small-to-large của set coverage; (iii) điều chỉnh proposal size theo uncertainty; và (iv) tích hợp proposal vào exact search mà không cho neural model thực hiện unsafe pruning.
+
+\section{Quan sát sơ bộ}
+
+\subsection{Thiết lập}
+
+Chúng tôi huấn luyện lại COPT-GCON cho MIS trên RB-small với một seed. Checkpoint tốt nhất đạt validation size xấp xỉ $18.2$, gần với kết quả baseline RB-small được báo cáo trong COPT-MT. Checkpoint được đánh giá zero-shot trên complement của các DIMACS Maximum Clique instances. Decoder sắp xếp đỉnh theo score và xây nhiều nghiệm greedy, mỗi nghiệm bắt đầu từ một trong $k$ đỉnh đầu ranking; nghiệm lớn nhất được giữ lại.
+
+\subsection{Kết quả pilot}
+
+\begin{table}[ht]
+    \centering
+    \caption{Clique size của pretrained COPT khi thay đổi số điểm khởi tạo $k$. Đây là multi-start greedy decoding, chưa phải phương pháp được đề xuất.}
+    \label{tab:pilot}
+    \small
+    \begin{tabular}{lrrrrrr}
+        \toprule
+        Instance & $k=1$ & $k=5$ & $k=10$ & $k=25$ & $k=50$ & Best known \\
+        \midrule
+        C125.9       & 24 & 26 & 26 & 26  & 28  & 34  \\
+        C500.9       & 45 & 45 & 45 & 45  & 45  & 57  \\
+        brock200\_2  & 7  & 8  & 9  & 9   & 9   & 12  \\
+        p\_hat300-2  & 20 & 20 & 20 & 20  & 20  & 25  \\
+        MANN\_a27    & 27 & 30 & 53 & 114 & 117 & 126 \\
+        \midrule
+        Mean best-known ratio & 61.8\% & 65.2\% & 70.5\% & 80.2\% & 81.8\% & 100\% \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\begin{figure}[ht]
+    \centering
+    \begin{tikzpicture}
+        \begin{axis}[
+            width=0.92\linewidth,
+            height=6.4cm,
+            xlabel={Số điểm khởi tạo $k$},
+            ylabel={Clique size},
+            xmin=0, xmax=52,
+            ymin=0, ymax=130,
+            xtick={1,5,10,25,50},
+            grid=both,
+            legend style={at={(0.5,-0.22)},anchor=north,legend columns=3},
+            mark options={solid}
+        ]
+        \addplot[color=proposalorange,very thick,mark=*] coordinates {(1,27) (5,30) (10,53) (25,114) (50,117)};
+        \addlegendentry{MANN\_a27}
+        \addplot[color=coptblue,thick,mark=square*] coordinates {(1,24) (5,26) (10,26) (25,26) (50,28)};
+        \addlegendentry{C125.9}
+        \addplot[color=teal!70!black,thick,mark=triangle*] coordinates {(1,45) (5,45) (10,45) (25,45) (50,45)};
+        \addlegendentry{C500.9}
+        \addplot[color=purple,thick,mark=diamond*] coordinates {(1,7) (5,8) (10,9) (25,9) (50,9)};
+        \addlegendentry{brock200\_2}
+        \addplot[color=red!65!black,thick,mark=o] coordinates {(1,20) (5,20) (10,20) (25,20) (50,20)};
+        \addlegendentry{p\_hat300-2}
+        \end{axis}
+    \end{tikzpicture}
+    \caption{Độ nhạy theo $k$ không đồng nhất giữa các graph family. MANN\_a27 cần proposal lớn, trong khi C500.9 và p\_hat300-2 bão hòa từ $k=1$.}
+    \label{fig:pilot}
+\end{figure}
+
+Pilot cho thấy một failure mode đáng nghiên cứu: top-1 có thể rất kém trong khi các vị trí sâu hơn vẫn tạo được nghiệm tốt. Tuy nhiên, đây chưa phải bằng chứng rằng COPT ranking tốt hơn structural heuristics. Randomly initialized GNN cũng đạt kết quả mạnh trên MANN\_a27, và random runs hiện chưa dùng cùng một score vector cho mọi $k$. Do đó, pilot chỉ được dùng làm \emph{motivation}, không được dùng để tuyên bố phương pháp đã thành công.
+
+\section{Khoảng trống nghiên cứu và câu hỏi trung tâm}
+
+\paragraph{Khoảng trống.}
+Các decoder multi-seed hiện có dùng fixed-$k$ và tối ưu chất lượng nghiệm cuối, nhưng không đo xem proposal có chứa một lựa chọn vẫn dẫn tới optimum hay không \citep{min2022hybrid}. Learned ordering cho Maximum Clique đã được nghiên cứu ở root-level hoặc initial ordering \citep{min2025ordering}; learning-to-branch cũng đã xuất hiện trong exact CO solvers \citep{kuang2024gs4co,zhang2022branching}. Đề xuất này chuyển mục tiêu học từ một ordering chung sang set-valued prediction tại trạng thái search, đồng thời đặt trọng tâm vào small-to-large coverage và proposal size thích ứng.
+
+\paragraph{Câu hỏi nghiên cứu trung tâm.}
+\begin{quote}
+\emph{Tập các optimal continuations được học chỉ từ những đồ thị nhỏ đã giải chính xác có duy trì candidate coverage hữu ích trên các đồ thị lớn và khác phân phối hay không; và proposal thích ứng theo uncertainty có thể khai thác coverage này để tăng tốc exact Maximum Clique search mà không làm mất tính tối ưu hay không?}
+\end{quote}
+
+\subsection{Các giả thuyết}
+
+\begin{description}[leftmargin=1.3cm,labelwidth=1cm]
+    \item[H1.] Khi graph size hoặc graph family thay đổi, tỷ lệ bao phủ tối ưu ở top-$k$ ($\hitk$) suy giảm chậm hơn top-1 accuracy.
+    \item[H2.] Với cùng target coverage, adaptive proposal sử dụng ít candidates hơn fixed large-$k$.
+    \item[H3.] Proposal-guided search giảm time-to-best và số search nodes; khi tính cả neural overhead, nó vẫn cải thiện tổng wall-clock time trên một tập con đáng kể của benchmark.
+    \item[H4.] Vì neural model chỉ thay đổi thứ tự duyệt, exact solver vẫn trả về optimum nếu chạy đến khi hoàn tất.
+\end{description}
+
+\section{Phương pháp đề xuất}
+
+\subsection{Trạng thái tìm kiếm và optimal-continuation set}
+
+Tại một node của branch-and-bound, ký hiệu:
+\begin{itemize}[nosep]
+    \item $C$: clique hiện tại;
+    \item $P$: tập đỉnh còn có thể thêm vào $C$;
+    \item $\omega(G[P])$: kích thước maximum clique của candidate subgraph.
+\end{itemize}
+
+Một đỉnh $v\in P$ là optimal continuation nếu chọn $v$ vẫn cho phép đạt một maximum extension của trạng thái hiện tại:
+\begin{equation}
+    Y(C,P)=\left\{v\in P:\;1+\omega\!\left(G[P\cap N(v)]\right)=\omega(G[P])\right\}.
+    \label{eq:optimal-set}
+\end{equation}
+Chỉ cần proposal $S(C,P)$ thỏa $S(C,P)\cap Y(C,P)\neq\varnothing$ để proposal còn chứa ít nhất một optimal branch.
+
+\subsection{Giải thích trực quan về \texorpdfstring{$\hitk$}{Hit@k}}
+
+Với một trạng thái tìm kiếm, lấy $k$ đỉnh có score cao nhất của mô hình. Ta ghi nhận một ``hit'' nếu trong $k$ đỉnh này có \emph{ít nhất một} đỉnh thuộc $Y(C,P)$, tức là vẫn còn khả năng dẫn tới optimum:
+\begin{equation}
+    h_k(C,P)=
+    \begin{cases}
+        1, & \TopK_k(s)\cap Y(C,P)\neq\varnothing,\\
+        0, & \text{ngược lại.}
+    \end{cases}
+\end{equation}
+Trên một tập gồm $M$ trạng thái, $\hitk$ là tỷ lệ phần trăm các trạng thái có hit:
+\begin{equation}
+    \hitk=\frac{1}{M}\sum_{i=1}^{M}h_k(C_i,P_i).
+    \label{eq:hitk}
+\end{equation}
+Ví dụ, nếu có 100 trạng thái và top-10 của COPT chứa ít nhất một optimal continuation ở 82 trạng thái, thì $\mathrm{Hit@10}=82\%$. Metric này không yêu cầu đỉnh đứng đầu phải đúng; nó chỉ kiểm tra xem một tập đề xuất kích thước $k$ còn giữ được ít nhất một đường đi tối ưu hay không. $\hitk$ cũng không có nghĩa solver đã tìm được optimum: solver vẫn phải tìm kiếm bên trong proposal và, nếu cần chứng minh tối ưu, duyệt cả phần fallback.
+
+\subsection{Sinh nhãn từ đồ thị nhỏ}
+
+Các graph nhỏ được giải bằng exact solver. Search states được lấy mẫu ở nhiều độ sâu; với mỗi state, $\omega(G[P])$ và $\omega(G[P\cap N(v)])$ được cache để gán nhãn theo \cref{eq:optimal-set}. Để tránh thiên lệch do nhiều trạng thái gần nhau, dữ liệu được chia theo graph instance, không chia ngẫu nhiên theo state.
+
+Giai đoạn đầu chỉ dùng root state để kiểm tra tính khả thi. Chỉ khi root-level $\hit@k$ vượt các structural baselines mới mở rộng sang internal search states.
+
+\subsection{Mô hình set-valued ranking}
+
+COPT encoder được khởi tạo từ checkpoint MIS trên RB-small. Với score $s_v$ và
+\begin{equation}
+    p_v=\frac{\exp(s_v)}{\sum_{u\in P}\exp(s_u)},
+\end{equation}
+set loss đặt probability mass lên bất kỳ optimal continuation nào:
+\begin{equation}
+    \mathcal{L}_{\mathrm{set}}
+    =-\log\left(\sum_{v\in Y(C,P)}p_v\right).
+\end{equation}
+Một pairwise ranking term có thể được thêm để tách positive và negative candidates:
+\begin{equation}
+    \mathcal{L}_{\mathrm{rank}}
+    =\frac{1}{|Y||P\setminus Y|}
+    \sum_{u\in Y}\sum_{v\notin Y}
+    \log\left(1+\exp\left(-(s_u-s_v)\right)\right).
+\end{equation}
+Loss cuối là $\mathcal{L}=\mathcal{L}_{\mathrm{set}}+\lambda\mathcal{L}_{\mathrm{rank}}$. Thực nghiệm sẽ so sánh zero-shot COPT, frozen encoder và end-to-end fine-tuning để xác định đóng góp của supervision mới.
+
+\subsection{Proposal thích ứng theo uncertainty}
+
+Fixed-$k$ không phù hợp với quan sát ở \cref{tab:pilot}. Phiên bản đầu chọn $k$ nhỏ nhất sao cho cumulative score mass đạt ngưỡng $1-\epsilon$:
+\begin{equation}
+    k^*=\min\left\{k:\sum_{v\in\TopK_k(P)}p_v\ge 1-\epsilon\right\}.
+\end{equation}
+Các lựa chọn uncertainty khác gồm normalized entropy, margin giữa các score liên tiếp và ensemble variance. Giai đoạn sau sẽ thử calibration để chọn threshold theo target coverage. Mọi tuyên bố coverage thống kê sẽ chỉ áp dụng dưới giả thiết calibration và test exchangeable; trên OOD DIMACS, coverage được báo cáo thực nghiệm, không gọi là bảo đảm xác suất.
+
+\subsection{Tích hợp vào exact search}
+
+Tại mỗi search state, candidates được chia thành hai hàng đợi:
+\begin{equation}
+    Q_{\mathrm{proposal}}=S(C,P),\qquad
+    Q_{\mathrm{fallback}}=P\setminus S(C,P).
+\end{equation}
+Solver duyệt $Q_{\mathrm{proposal}}$ trước để tìm incumbent tốt sớm, sau đó vẫn duyệt $Q_{\mathrm{fallback}}$. Neural score không được dùng làm điều kiện prune. Chỉ coloring/cardinality upper bounds hợp lệ mới loại nhánh.
+
+\paragraph{Mệnh đề về tính chính xác.}
+Nếu (i) mọi nhánh không bị safe bound loại đều được duyệt hữu hạn; (ii) proposal chỉ thay đổi thứ tự duyệt; và (iii) mọi pruning rule là sound, thì nghiệm cuối của solver không phụ thuộc vào neural ranking và vẫn là maximum clique. Mệnh đề này không phải đóng góp lý thuyết mới; nó xác định ranh giới an toàn của hệ thống.
+
+\section{Thiết kế thực nghiệm}
+
+\subsection{Giai đoạn A: kiểm tra tín hiệu trước khi huấn luyện mới}
+
+Trên graph nhỏ có optimum chính xác, so sánh zero-shot COPT với random, degree, core number và coloring order. Metric chính là tỷ lệ bao phủ tối ưu $\hitk$ trong \cref{eq:hitk}. Báo cáo thêm proposal fraction $k/|P|$, mean reciprocal rank của positive đầu tiên và kết quả theo graph size/density. Đây là go/no-go experiment: nếu COPT không tốt hơn structural baselines, nghiên cứu không chuyển ngay sang exact integration mà phải điều chỉnh representation hoặc learning target.
+
+\subsection{Giai đoạn B: đánh giá set learning và adaptive proposal}
+
+Các ablation gồm:
+\begin{enumerate}[nosep]
+    \item COPT zero-shot;
+    \item frozen COPT encoder + set head;
+    \item full fine-tuning bằng set loss;
+    \item fixed-$k$;
+    \item uncertainty-adaptive $k$;
+    \item hybrid COPT + structural score.
+\end{enumerate}
+Đánh giá theo size shift và distribution shift, không chỉ random train/test split trên cùng phân phối.
+
+\subsection{Giai đoạn C: exact Maximum Clique}
+
+Tích hợp vào một solver có coloring bound. So sánh:
+\begin{itemize}[nosep]
+    \item solver gốc;
+    \item degree/core/coloring ordering;
+    \item learned initial ordering;
+    \item COPT fixed-$k$ proposal;
+    \item \method{} adaptive proposal.
+\end{itemize}
+
+Các metric gồm neural preprocessing time, time-to-first incumbent, time-to-best, primal integral, search nodes, time-to-proof, số instance chứng minh optimal trong time limit và peak memory. Wall-clock time phải bao gồm GNN inference; không chỉ báo giảm search nodes.
+
+\subsection{Dữ liệu}
+
+\begin{itemize}[nosep]
+    \item \textbf{Synthetic exact graphs:} ER/RB với nhiều size và density để sinh nhãn.
+    \item \textbf{In-distribution:} RB-small validation/test.
+    \item \textbf{Out-of-distribution:} DIMACS families C, DSJC, brock, p\_hat, MANN, hamming và keller.
+\end{itemize}
+Mọi lựa chọn checkpoint và hyperparameter được thực hiện trên validation data; DIMACS test không được dùng để chọn checkpoint nhằm tránh test-set tuning.
+
+\section{Đóng góp dự kiến và ranh giới novelty}
+
+\begin{enumerate}
+    \item \textbf{Formulation:} optimal-continuation set prediction cho Maximum Clique search, thay vì dự đoán một node hoặc solution membership độc lập.
+    \item \textbf{Generalization study:} đo trực tiếp set coverage khi chuyển từ graph nhỏ sang graph lớn/OOD.
+    \item \textbf{Adaptive proposal:} điều chỉnh candidate set theo uncertainty thay cho fixed-$k$.
+    \item \textbf{Exact integration:} learned ordering với exhaustive fallback và safe pruning, được đánh giá bằng cả anytime và proof metrics.
+\end{enumerate}
+
+Đề xuất không claim rằng top-$k$ decoding, greedy clique construction, learned ordering hay exact fallback tự thân là mới. Novelty chỉ có thể được xác lập bởi sự kết hợp có chủ đích giữa optimal-continuation supervision, adaptive coverage và small-to-large exact-search evaluation.
+
+\section{Rủi ro và phương án giảm thiểu}
+
+\begin{table}[ht]
+    \centering
+    \small
+    \caption{Rủi ro nghiên cứu và phương án xử lý.}
+    \begin{tabular}{p{0.29\linewidth}p{0.30\linewidth}p{0.31\linewidth}}
+        \toprule
+        Rủi ro & Dấu hiệu & Phương án \\
+        \midrule
+        COPT không hơn structural heuristics & $\hitk$ tương đương degree/core & Hybrid score; set fine-tuning; thu hẹp claim thành failure analysis \\
+        Sinh exact labels quá đắt & Quá ít states hoặc graph sizes & Root-only MVP; cache subproblems; curriculum theo size \\
+        Neural overhead lớn hơn lợi ích search & Nodes giảm nhưng wall-clock tăng & Inference chỉ ở root/độ sâu chọn lọc; scorer nhẹ; cache embeddings \\
+        Adaptive $k$ không calibrated trên OOD & Coverage DIMACS thấp & OOD fallback, minimum $k$, progressive widening \\
+        Test-set tuning trên DIMACS & Chọn $k$/checkpoint theo DIMACS & Tách validation families; khóa protocol trước final test \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+Một kết quả âm vẫn có giá trị nếu được thiết kế tốt: nó có thể chỉ ra rằng objective quality trên graph nhỏ không dự báo search utility trên graph lớn, và xác định graph regimes nơi learned ranking gây negative transfer.
+
+\section{Kế hoạch thực hiện và tiêu chí quyết định}
+
+\begin{table}[ht]
+    \centering
+    \small
+    \caption{Kế hoạch theo mốc thay vì cam kết kết quả.}
+    \begin{tabular}{p{0.13\linewidth}p{0.54\linewidth}p{0.23\linewidth}}
+        \toprule
+        Mốc & Công việc & Deliverable \\
+        \midrule
+        M1 & Chuẩn hóa checkpoint, pilot và deterministic baselines & Reproduction bundle \\
+        M2 & Exact-label generator ở root states; degree/core/random/COPT & Bảng $\hitk$ và go/no-go \\
+        M3 & Internal-state sampling và set-loss training & Coverage theo depth/size \\
+        M4 & Adaptive proposal và calibration ablation & Coverage--compression curves \\
+        M5 & Tích hợp exact solver với safe fallback & Solver correctness tests \\
+        M6 & DIMACS evaluation, anytime/proof metrics, ablations & Bảng/plot chính và draft paper \\
+        \bottomrule
+    \end{tabular}
+\end{table}
+
+\paragraph{Tiêu chí go/no-go sau M2.}
+Tiếp tục exact integration nếu COPT hoặc set-trained COPT cải thiện $\hitk$ một cách nhất quán so với degree/core dưới cùng proposal fraction, và lợi ích không biến mất hoàn toàn khi tăng graph size. Nếu không, proposal được điều chỉnh sang phân tích negative transfer hoặc hybrid structural--learned ranking trước khi đầu tư vào solver.
+
+\section{Kết quả kỳ vọng}
+
+Kết quả tích cực kỳ vọng là một solver hybrid trong đó learned proposal cải thiện khả năng tìm incumbent và giảm search effort, trong khi exactness đến từ symbolic bounds và exhaustive fallback. Quan trọng hơn, nghiên cứu sẽ trả lời định lượng liệu set-valued prediction có thật sự generalize tốt hơn top-1 trong Maximum Clique search hay không. Proposal không giả định trước câu trả lời; mọi claim cuối cùng phụ thuộc vào $\hitk$, coverage--compression trade-off và wall-clock exact-search evaluation.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\end{document}

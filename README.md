@@ -1,21 +1,43 @@
-# COPT-MT — clean upstream baseline
+# COPT-MT research workspace
 
-Repository này đã được làm sạch và khôi phục từ source chính thức:
+Không gian nghiên cứu sạch dựa trên mã nguồn chính thức của
+[COPT-MT](https://github.com/semihcanturk/COPT-MT), upstream commit
+`ffa19d01984e178252fd874c8a956664f93a186d`.
 
-- Upstream: <https://github.com/semihcanturk/COPT-MT>
-- Upstream commit: `ffa19d01984e178252fd874c8a956664f93a186d`
-- `src/`, `configs/`, `run/`, `solver.py` và `pyproject.toml` được lấy nguyên trạng từ commit trên.
-- README nguyên bản của tác giả được giữ tại [`README_UPSTREAM.md`](README_UPSTREAM.md).
-- Các PDF nghiên cứu được giữ ở thư mục gốc.
-- Hai đề xuất DIMACS cũ được giữ trong [`research_notes/`](research_notes/). Chúng là ghi chú ý tưởng, không phải implementation đã được xác minh.
+`src/`, `configs/`, `run/`, `solver.py` và `pyproject.toml` được giữ nguyên từ
+upstream. Những thử nghiệm mới nên được phát triển tách biệt và ghi rõ thay đổi
+so với baseline.
 
-Mục tiêu trước mắt là tái hiện baseline chính thức trên code sạch. Không thêm DIMACS, patch inference hoặc local search trước khi baseline RB-small khớp hợp lý với paper.
+## Cấu trúc thư mục
 
-## Chạy từ đầu trên Kaggle
+```text
+.
+|-- artifacts/
+|   `-- checkpoints/mis_rb_small/epoch_189.ckpt
+|-- configs/                    # Hydra configs của COPT-MT
+|-- data/
+|   `-- rb/small/processed/data.pt
+|-- docs/
+|   |-- papers/                 # Tài liệu PDF
+|   `-- proposal/               # Proposal LaTeX và bản ZIP cho Overleaf
+|-- experiments/guidance/       # Reference solver và paired replay benchmark mới
+|-- run/                        # Job wrappers nguyên bản
+|-- src/                        # Mã nguồn COPT-MT nguyên bản
+|-- README_UPSTREAM.md          # README của tác giả
+|-- pyproject.toml
+`-- solver.py
+```
 
-### 1. Tạo notebook và bật GPU
+`data/`, `artifacts/`, log huấn luyện và cache được bỏ khỏi Git để tránh commit
+nhầm file lớn. Hiện tại cần giữ hai artifact cục bộ:
 
-Trong **Notebook settings**, chọn **Accelerator → GPU**. Sau đó kiểm tra:
+- `data/rb/small/processed/data.pt`: RB-small đã transform.
+- `artifacts/checkpoints/mis_rb_small/epoch_189.ckpt`: checkpoint tốt nhất đã
+  huấn luyện.
+
+## Chạy baseline trên Kaggle
+
+### 1. Kiểm tra GPU
 
 ```python
 import torch
@@ -25,20 +47,10 @@ print("CUDA runtime:", torch.version.cuda)
 print("CUDA available:", torch.cuda.is_available())
 ```
 
-Chỉ tiếp tục khi `CUDA available: True`. Không cài lại `torch` bằng pip vì có thể làm mất CUDA build của Kaggle.
+Chỉ tiếp tục khi `CUDA available: True`. Không cài lại PyTorch nếu Kaggle đã
+cung cấp CUDA build phù hợp.
 
-### 2. Clone repository
-
-```python
-%cd /kaggle/working
-!git clone https://github.com/ghugn/COPT.git COPT-MT
-%cd /kaggle/working/COPT-MT
-!git rev-parse HEAD
-```
-
-Không copy `data/*/processed`, `logs/` hoặc checkpoint từ lần chạy cũ vào clean run.
-
-### 3. Cài dependency Python
+### 2. Cài dependency
 
 ```python
 %pip install -q \
@@ -50,9 +62,7 @@ Không copy `data/*/processed`, `logs/` hoặc checkpoint từ lần chạy cũ 
     yacs einops dwave-networkx dimod ogb performer-pytorch python-sat
 ```
 
-### 4. Cài PyG extensions đúng Torch/CUDA
-
-Không dùng một URL wheel viết cứng. Cell sau tự tạo index phù hợp với Torch/CUDA hiện tại:
+Cài PyG extensions theo đúng Torch/CUDA của session:
 
 ```python
 import subprocess
@@ -63,11 +73,7 @@ assert torch.cuda.is_available(), "Hãy bật GPU trước khi cài PyG extensio
 
 torch_version = torch.__version__.split("+")[0]
 cuda_tag = "cu" + torch.version.cuda.replace(".", "")
-wheel_index = (
-    f"https://data.pyg.org/whl/"
-    f"torch-{torch_version}+{cuda_tag}.html"
-)
-print("Wheel index:", wheel_index)
+wheel_index = f"https://data.pyg.org/whl/torch-{torch_version}+{cuda_tag}.html"
 
 subprocess.check_call([
     sys.executable,
@@ -81,28 +87,15 @@ subprocess.check_call([
 ])
 ```
 
-Nếu báo `No matching distribution found`, dừng lại và ghi lại ba giá trị `torch.__version__`, `torch.version.cuda` và phiên bản Python. Không nên tự compile hoặc đổi Torch trước khi xác định wheel tương thích.
+### 3. Dùng lại RB-small đã transform
 
-Kiểm tra môi trường:
+Khi upload archive/dataset lên Kaggle, bảo đảm file cuối cùng nằm tại:
 
-```python
-import hydra
-import lightning
-import torch
-import torch_geometric
-import torch_scatter
-
-print("Hydra:", hydra.__version__)
-print("Lightning:", lightning.__version__)
-print("Torch:", torch.__version__)
-print("PyG:", torch_geometric.__version__)
-print("CUDA:", torch.cuda.is_available())
-print("GPU:", torch.cuda.get_device_name(0))
+```text
+/kaggle/working/COPT-MT/data/rb/small/processed/data.pt
 ```
 
-### 5. Train baseline MIS trên RB-small
-
-Lệnh dưới đây dùng nguyên experiment config chính thức: seed `12345`, 6.000 RB-small graphs và tối đa 200 epochs.
+### 4. Train lại khi cần
 
 ```python
 %cd /kaggle/working/COPT-MT
@@ -115,47 +108,38 @@ Lệnh dưới đây dùng nguyên experiment config chính thức: seed `12345`
     data.num_workers=2
 ```
 
-Không override loss, decoder, batch size, số layer, learning rate hoặc số epoch trong clean reproduction đầu tiên.
+### 5. Checkpoint đã giữ
 
-### 6. Xác định best checkpoint
+Checkpoint hiện tại:
 
-```python
-from pathlib import Path
-
-root = Path("/kaggle/working/COPT-MT")
-checkpoints = sorted(
-    root.glob("logs/train/runs/*/checkpoints/*.ckpt"),
-    key=lambda p: p.stat().st_mtime,
-    reverse=True,
-)
-
-for checkpoint in checkpoints[:10]:
-    size_mb = checkpoint.stat().st_size / 1024**2
-    print(checkpoint, f"{size_mb:.1f} MB")
+```text
+artifacts/checkpoints/mis_rb_small/epoch_189.ckpt
 ```
 
-`epoch_XXX.ckpt` là checkpoint tốt nhất theo `val/size`; `last.ckpt` chỉ là trạng thái epoch cuối. Khi đánh giá paper, ưu tiên `epoch_XXX.ckpt`.
-
-### 7. Lưu checkpoint khỏi Kaggle
+Trên Kaggle có thể đặt đường dẫn tuyệt đối tương ứng, ví dụ:
 
 ```python
-from IPython.display import FileLink
-
-BEST_CHECKPOINT = next(p for p in checkpoints if p.name != "last.ckpt")
-print("Selected:", BEST_CHECKPOINT)
-FileLink(str(BEST_CHECKPOINT))
+CHECKPOINT = "/kaggle/working/COPT-MT/artifacts/checkpoints/mis_rb_small/epoch_189.ckpt"
 ```
 
-Bấm link được tạo để tải file về máy và **Save Version** notebook để kết quả trở thành Kaggle Output. `/kaggle/working` có thể mất khi session kết thúc.
+## Proposal nghiên cứu
 
-## Quy trình nghiên cứu đề nghị
+Proposal hiện hành nằm tại [`docs/proposal/main.tex`](docs/proposal/main.tex).
+File [`docs/proposal/overleaf_proposal.zip`](docs/proposal/overleaf_proposal.zip)
+có thể upload trực tiếp lên Overleaf. Hai proposal DIMACS cũ do LLM tạo đã được
+loại bỏ để tránh nhầm với hướng nghiên cứu hiện tại.
 
-1. Chạy clean upstream với seed `12345` và lưu đầy đủ commit, config, metrics, checkpoint.
-2. Kiểm tra baseline MIS RB-small trước khi đánh giá DIMACS.
-3. Lặp lại các seed của paper nếu baseline một seed hợp lý.
-4. Chỉ sau đó mới tạo nhánh riêng để thêm loader/evaluator DIMACS.
-5. Mọi thay đổi so với upstream phải được ghi thành ablation riêng; không sửa trực tiếp baseline.
+Hướng hiện tại: học khi nào nên gọi COPT trong exact clique search, có tính chi phí
+preprocessing và inference. Xem [hướng dẫn Kaggle](experiments/guidance/README.md).
+Bước đầu là paired replay để đo dư địa cải thiện; chưa cần train lại checkpoint.
+Ý tưởng optimal-continuation trước đó được lưu tại
+`docs/proposal/archive/optimal_continuation_v1.tex` để đối chiếu.
 
-## Những gì không còn trong repository
+## Nguyên tắc thực nghiệm
 
-Clean reset đã loại bỏ source thử nghiệm LLM, script reproduction tự viết, cache dữ liệu, logs, reports, checkpoint cũ, môi trường `.venv` và các file Word. Nếu cần khôi phục một nội dung cũ, lấy từ lịch sử Git thay vì trộn lại vào baseline sạch.
+1. Giữ baseline upstream bất biến.
+2. Ghi lại commit, seed, config, checkpoint và môi trường cho mỗi thí nghiệm.
+3. So sánh learned ranking với random, degree, core và coloring trên cùng trạng
+   thái tìm kiếm.
+4. Tách rõ greedy/multi-start evaluation khỏi exact-search evaluation.
+5. Luôn tính neural inference overhead khi báo cáo thời gian.

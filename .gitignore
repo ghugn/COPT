@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+
+# Hydra / Lightning / experiment trackers
+logs/
+outputs/
+multirun/
+lightning_logs/
+wandb/
+
+# Generated datasets and model artifacts
+data/
+artifacts/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Guidance bundles & scratch
+*.zip
+full7.docx
+full7_extracted.txt
+guidance_results_full_m1_m1b/
+overleaf_proposal_MSO_Lab/
+

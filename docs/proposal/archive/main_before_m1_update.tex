@@ -1,0 +1,132 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T5]{fontenc}
+\usepackage[vietnamese]{babel}
+\usepackage{lmodern,microtype,amsmath,amssymb,booktabs,tabularx,enumitem}
+\usepackage[margin=2.5cm]{geometry}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+\title{\Large Học khi nào sử dụng hướng dẫn neural\\trong tìm kiếm Maximum Clique chính xác\\[0.4em]
+\large Đánh giá lợi ích sau chi phí và khả năng chuyển từ bài nhỏ sang bài lớn}
+\author{Sinh viên: [Điền họ tên]\\Mentor: [Điền tên mentor]}
+\date{\today}
+\begin{document}
+\maketitle
+\begin{abstract}
+Hướng dẫn từ graph neural network có thể cải thiện thứ tự tìm kiếm trong bài toán Maximum Clique, nhưng chi phí tạo đặc trưng và inference có thể lớn hơn phần thời gian tiết kiệm được. Đề xuất này nghiên cứu liệu một bộ quyết định nhẹ, học từ các trạng thái tìm kiếm trên đồ thị nhỏ, có nhận biết được khi nào nên sử dụng neural guidance trên đồ thị lớn hơn hay không. Giai đoạn đầu thu thập dữ liệu bằng cách chạy lại cùng một trạng thái với cùng incumbent: một lần dùng heuristic cấu trúc, một lần áp dụng COPT tại trạng thái đó rồi tiếp tục bằng heuristic cấu trúc. Mọi so sánh tính cả chi phí neural. Trên dữ liệu này, chúng tôi đánh giá dư địa cải thiện của một bộ chọn biết trước kết quả, trước khi huấn luyện bộ chọn thực tế. Giai đoạn sau học quyết định gọi hoặc bỏ qua COPT từ đặc trưng rẻ của trạng thái và đánh giá trong quá trình search hoàn chỉnh. Các phép cắt nhánh chỉ sử dụng bound hợp lệ; neural guidance chỉ thay đổi thứ tự duyệt. Đóng góp dự kiến nằm ở phân tích lợi ích theo trạng thái, quyết định có xét chi phí và kiểm chứng small-to-large; chưa có kết quả thực nghiệm xác nhận các giả thuyết này.
+\end{abstract}
+
+\section{Vấn đề nghiên cứu và phạm vi}
+Maximum Clique tìm tập đỉnh lớn nhất đôi một kề nhau. Exact solver sử dụng branch-and-bound để vừa tìm nghiệm tốt, vừa chứng minh không còn nghiệm tốt hơn. Hai nhiệm vụ này khác nhau: một ordering giúp tìm incumbent sớm chưa chắc giảm thời gian chứng minh tối ưu.
+
+Dự án đã có checkpoint COPT huấn luyện cho MIS trên RB-small. Quan hệ $\omega(G)=\alpha(\overline G)$ cho phép thử checkpoint này trên complement của bài toán clique. Tuy nhiên, validation trên RB-small hoặc kết quả greedy decoding không chứng minh lợi ích cho exact search. Proposal này giữ checkpoint làm một nguồn hướng dẫn có sẵn và nghiên cứu hiệu quả sử dụng nó, chưa yêu cầu train lại backbone.
+
+Mục tiêu ban đầu giới hạn ở Maximum Clique không trọng số. Dữ liệu thăm dò là ER tổng hợp, gồm root và các trạng thái nội bộ. RB, các graph family khác và DIMACS được bổ sung sau khi thí nghiệm đầu cho thấy dư địa cải thiện. Không tuyên bố giải được mọi DIMACS instance hay chuyển tự động sang bài toán thực tế.
+
+\section{Công trình liên quan và ranh giới novelty}
+Học branching trên bài nhỏ và kiểm tra trên bài lớn đã có trong nghiên cứu của Gasse và cộng sự \citep{gasse2019}. Learned ordering cho exact Maximum Clique đã được nghiên cứu trực tiếp \citep{min2025ordering}. ASAP nghiên cứu proposal set dưới distribution shift \citep{fang2026asap}. Học lọc không gian tìm kiếm cho maximum clique cũng đã có tiền lệ \citep{lauri2019}.
+
+Gần nhất về câu hỏi điều khiển chi phí là học lịch gọi primal heuristics trong branch-and-bound \citep{chmiela2021}. Do đó, ``học khi nào dùng heuristic'' và ``chỉ thay ordering để giữ exactness'' không phải đóng góp mới tự thân.
+
+Khoảng trống cần kiểm chứng là sự kết hợp cụ thể giữa: (i) dữ liệu replay theo trạng thái với cùng incumbent và cùng solver continuation; (ii) lựa chọn neural guidance dựa trên lợi ích sau chi phí; (iii) chuyển bộ chọn từ trạng thái nhỏ sang đồ thị lớn; (iv) đánh giá lợi ích của chính sách trong search hoàn chỉnh. Chưa khẳng định đây là phương pháp đầu tiên; cần tiếp tục đối chiếu algorithm selection, heuristic scheduling và selective neural inference trước khi viết claim cuối cùng.
+
+\section{Câu hỏi và giả thuyết}
+\begin{quote}
+Liệu có thể dự đoán, từ đặc trưng rẻ của một trạng thái tìm kiếm, rằng việc gọi neural guidance sẽ đem lại lợi ích vượt chi phí; và quyết định học trên graph nhỏ có còn hữu ích trên graph lớn hơn hay không?
+\end{quote}
+\begin{description}[style=nextline]
+\item[H1: Dư địa cải thiện.] Neural guidance có hiệu quả không đồng nhất giữa các trạng thái; bộ chọn hindsight trên các replay cho thấy lợi ích đáng kể so với luôn dùng hoặc luôn bỏ qua neural guidance.
+\item[H2: Khả năng dự đoán.] Bộ chọn học từ đặc trưng rẻ giảm decision regret trên graph giữ lại so với ngưỡng kích thước/độ sâu đơn giản.
+\item[H3: Small-to-large.] Lợi ích còn tồn tại khi tăng kích thước graph, sau khi phân biệt kích thước graph gốc với kích thước tập ứng viên hiện tại.
+\item[H4: Hiệu quả end-to-end.] Bộ chọn cải thiện chất lượng nghiệm theo thời gian hoặc thời gian chứng minh tối ưu sau khi tính toàn bộ overhead.
+\end{description}
+Exactness là yêu cầu đúng đắn cần kiểm thử và lập luận, không phải giả thuyết học máy hoặc novelty độc lập.
+
+\section{Thiết kế phương pháp}
+\subsection{Trạng thái và hai hành động}
+Trạng thái gồm $s=(G,C,P,I)$, với $C$ là clique hiện tại, $P$ là tập ứng viên còn hợp lệ và $I$ là incumbent toàn cục có witness hợp lệ. Xét hai hành động:
+\begin{itemize}[nosep]
+\item $a=0$: dùng heuristic cấu trúc tại trạng thái hiện tại;
+\item $a=1$: tạo đặc trưng, chạy COPT trên complement của $G[P]$, rồi dùng ranking để chọn nhánh tại trạng thái hiện tại.
+\end{itemize}
+Trong replay giai đoạn đầu, mọi trạng thái con đều quay về heuristic cấu trúc. Đây là một can thiệp tại một trạng thái, chưa phải chính sách gọi neural nhiều lần. Cách giới hạn này giúp so sánh công bằng và kiểm soát chi phí sinh dữ liệu.
+
+Reference solver sử dụng greedy coloring bound, tính lại trên tập ứng viên còn lại sau mỗi lần loại nhánh. Không tái sử dụng prefix bound cũ sau khi thay ordering. Solver Python này phục vụ kiểm chứng cơ chế, không đại diện cho solver cạnh tranh hàng đầu.
+
+\subsection{Thu thập paired replay}
+Chạy solver cấu trúc để thu root và một mẫu reservoir các trạng thái nội bộ chưa bị bound loại. Với mỗi snapshot, khôi phục chính xác $C,P,I$ và chạy hai hành động độc lập với cùng giới hạn thời gian và node budget. Đảo thứ tự chạy theo seed, lặp nhiều lần và lưu trajectory incumbent. Điều này đo chênh lệch dưới continuation policy đã cố định; không chứng minh tác động của một chính sách mới lên toàn bộ search tree.
+
+Giai đoạn đầu sampling chỉ từ solver cấu trúc có thiên lệch. Khi triển khai gate, phải đánh giá và bổ sung snapshot từ các trace do gate sinh ra trên training graphs; không dùng test graphs để cập nhật.
+
+\subsection{Mục tiêu có xét chi phí}
+Với replay đều hoàn tất, đặt
+\begin{equation}
+J_0(s)=T_{\mathrm{search},0},\qquad
+J_1(s)=T_{\mathrm{features}}+T_{\mathrm{transfer}}+T_{\mathrm{inference}}+T_{\mathrm{search},1}.
+\end{equation}
+Lợi ích là $\Delta(s)=J_0(s)-J_1(s)$. Chọn $a=1$ khi lợi ích dự đoán vượt chi phí gate và một margin chống nhiễu timing. Thời gian load checkpoint được báo riêng như chi phí khởi tạo; đo steady-state sau warmup và công bố cả kịch bản một graph nếu cần.
+
+Replay bị timeout là dữ liệu bị kiểm duyệt, không được coi thời gian cutoff là time-to-proof thật. Trong ngân sách $B$, sử dụng mục tiêu anytime riêng:
+\begin{equation}
+A_a(s;B)=\int_0^B [L_a(t)-L_s]\,dt,
+\end{equation}
+trong đó $L_s=|I|$ và clock bắt đầu trước neural preprocessing. Đây là diện tích cải thiện incumbent, không được gọi là normalized primal integral khi chưa có nghiệm tham chiếu. Trong benchmark, nhánh neural chỉ còn $B-T_{\mathrm{neural}}$ cho search. Node budget là giới hạn bổ sung; mọi trường hợp hết ngân sách được ghi là chưa chứng minh.
+
+\subsection{Oracle và gate thực tế}
+Bộ chọn hindsight dùng $\min(J_0,J_1)$ trên các replay hoàn tất chỉ để đo dư địa trong menu hai hành động. Nó biết kết quả sau khi chạy, không phải thuật toán triển khai, và không phải upper bound cho toàn bộ chính sách nhiều can thiệp. Minimum của timing nhiễu có thể lạc quan; phân tích dùng median theo state, khoảng tin cậy theo graph và kiểm tra trên các repetition giữ lại.
+
+Gate đầu tiên là decision tree nông hoặc hồi quy lợi ích. Đặc trưng gồm $|P|$, mật độ $G[P]$, degree statistics, depth, incumbent và coloring bound có sẵn. Không dùng score entropy của COPT để quyết định có gọi COPT hay không, vì như vậy đã trả chi phí inference. Không đưa seed, graph ID, optimum hoặc kết quả replay vào feature. Chi phí tính đặc trưng gate cũng phải được đo; một bound có sẵn trong solver nên được tái sử dụng.
+
+So sánh gate với ngưỡng kích thước và độ sâu. Chỉ tăng độ phức tạp nếu mô hình đơn giản không đủ. Đánh giá error có trọng số theo tổn thất quyết định thay vì chỉ accuracy gọi/không gọi.
+
+\subsection{Tính chính xác và trạng thái preprocessing}
+Mỗi hành động chỉ thay ordering, mọi nhánh chưa được safe bound loại vẫn được duyệt nếu ngân sách cho phép. Khi chạy hoàn tất ở root, kết quả là optimum. Replay hoàn tất ở một subtree chỉ chứng nhận subtree đó không cải thiện incumbent đã trả về, không chứng nhận toàn graph.
+
+Adapter dùng feature contract của checkpoint MIS: constant node feature, log-degree, clustering coefficient và triangle count trên complement. Upstream dùng $\log d$, do đó đỉnh complement có degree bằng 0 gây giá trị không hữu hạn. Pilot ghi nhận trường hợp này và fallback về structural ordering; không âm thầm đổi sang $\log(1+d)$. Phải báo tỷ lệ fallback và kiểm tra parity của adapter trước khi kết luận hiệu quả COPT.
+
+\section{Thiết kế thực nghiệm và baseline}
+\begin{enumerate}
+\item Structural solver và random root intervention để kiểm tra độ nhạy ordering.
+\item COPT gọi tại root của graph; COPT gọi tại một snapshot để xây paired data.
+\item Khi có gate online: never-call, always-call tại các state đủ điều kiện, root-only, depth/size threshold, random gate có call budget tương đương và learned gate.
+\item Baseline scorer rẻ dùng structural features; phân biệt giá trị của neural backbone với giá trị của gate.
+\item Sau pilot: so sánh trên solver mạnh hơn, cùng implementation và cùng cấu hình phần cứng; đối chiếu learned ordering gần nhất nếu tái lập được.
+\end{enumerate}
+
+Tách train/validation/calibration/test theo graph gốc trước khi lấy state. Không để các state cùng graph xuất hiện ở nhiều split. Báo cáo root và internal states riêng; so sánh trong các bin của $|P|$ để tránh nhầm generalization trên graph lớn với việc chỉ gặp lại subtree nhỏ.
+
+Đánh giá size shift và family shift riêng, rồi mới kết hợp. DIMACS giữ lại cho cuối, không dùng để chọn checkpoint/gate/threshold. Khi chuyển máy CPU/GPU, cần đo lại mô hình chi phí; timing benefit không được giả định bất biến theo phần cứng.
+
+Metrics gồm: tỷ lệ neural có lợi, mức tiết kiệm, call rate, feature/inference/search time, chất lượng incumbent tại các mốc thời gian, diện tích cải thiện, solved count, time-to-proof khi hoàn tất, node count và peak memory. Thống kê theo graph với paired bootstrap; không coi các state hoặc repetition là mẫu độc lập. Báo mọi timeout, không chỉ các instance cả hai phương pháp giải xong.
+
+\section{Tình trạng bằng chứng}
+\begin{itemize}
+\item Có checkpoint epoch 189 và RB-small đã transform từ thực nghiệm trước.
+\item Có reference solver và paired replay runner; kiểm thử logic bằng brute force trên mọi graph đến 5 đỉnh, nhiều ordering, và replay với incumbent.
+\item Chưa có kết quả paired COPT trên Kaggle. Chưa có learned gate hoặc bằng chứng tăng tốc.
+\item Pilot multi-start cũ không phải bằng chứng cho đề xuất mới; bản proposal cũ được lưu riêng để tham khảo.
+\end{itemize}
+Các mục kết quả định lượng sẽ được bổ sung từ raw logs; không đưa số kỳ vọng vào như kết quả đã đo.
+
+\section{Mốc triển khai và quyết định}
+\begin{tabularx}{\linewidth}{lXX}
+\toprule
+Mốc & Công việc & Điều kiện chuyển bước\\
+\midrule
+M0 & Solver, adapter, kiểm thử & Correctness và feature parity đạt\\
+M1 & Paired replay trên graph nhỏ & Có dư địa sau neural cost, vượt timing noise\\
+M2 & Gate nhẹ, split theo graph & Hơn threshold đơn giản trên graph giữ lại\\
+M3 & Gate online, thu trace mới & Lợi ích end-to-end, không chỉ offline replay\\
+M4 & Size/family shift; DIMACS & Lợi ích được định lượng cùng failure regimes\\
+M5 & Solver mạnh hơn; hoàn thiện bài & Kết quả không chỉ do Python baseline yếu\\
+\bottomrule
+\end{tabularx}
+
+Nếu COPT thua ở hầu hết state sau overhead, kiểm tra một scorer rẻ hoặc can thiệp root-only; không train gate để dự đoán một hành động luôn thua. Nếu oracle có lợi nhưng gate không học được, xem lại features, nhiễu timing và distribution shift. Nếu giảm nodes nhưng tăng thời gian, giới hạn call budget hoặc dừng claim tăng tốc. Negative result chỉ có giá trị khi protocol và baseline đủ mạnh.
+
+\section{Hướng mở rộng}
+Maximum Clique là bài toán kiểm chứng đầu tiên. Một kết quả tích cực có thể tạo động lực thử cơ chế trên bài toán search khác, nhưng không tự chứng minh hiệu quả trên SAT, coloring hay MILP. Mở rộng nhiều bài toán chỉ thực hiện sau khi xác nhận lợi ích ở Maximum Clique và rà soát novelty theo từng miền.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+\end{document}
