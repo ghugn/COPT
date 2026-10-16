@@ -83,6 +83,9 @@ def run_online_benchmark(checkpoint, device="cuda", sizes=(120, 150), densities=
     df.to_csv(output_path / "online_benchmark_results.csv", index=False)
     
     # Tổng kết
+    both_ex = df[(df["struct_exhausted"] == True) & (df["gate_exhausted"] == True)]
+    savings_on_both = both_ex["struct_time"].sum() - both_ex["gate_time"].sum() if len(both_ex) > 0 else 0.0
+    
     summary = {
         "total_graphs": len(df),
         "struct_total_time": df["struct_time"].sum(),
@@ -90,7 +93,11 @@ def run_online_benchmark(checkpoint, device="cuda", sizes=(120, 150), densities=
         "gate_total_time": df["gate_time"].sum(),
         "gate_net_savings": df["struct_time"].sum() - df["gate_time"].sum(),
         "gate_call_count": int(df["gate_called"].sum()),
-        "gate_call_rate_pct": float(df["gate_called"].mean() * 100.0)
+        "gate_call_rate_pct": float(df["gate_called"].mean() * 100.0),
+        "struct_exhausted": int(df["struct_exhausted"].sum()),
+        "gate_exhausted": int(df["gate_exhausted"].sum()),
+        "both_exhausted": len(both_ex),
+        "savings_on_both_exhausted": savings_on_both
     }
     
     with open(output_path / "summary.json", "w", encoding="utf-8") as f:
@@ -99,13 +106,19 @@ def run_online_benchmark(checkpoint, device="cuda", sizes=(120, 150), densities=
     print("\n" + "="*70)
     print("           TỔNG KẾT THỰC NGHIỆM MILESTONE M3 (ONLINE BENCHMARK)")
     print("="*70)
-    print(f"Tổng thời gian Structural:   {summary['struct_total_time']:.2f}s")
-    print(f"Tổng thời gian Always COPT:  {summary['always_total_time']:.2f}s")
-    print(f"Tổng thời gian Gate M3:      {summary['gate_total_time']:.2f}s")
-    print(f"Tiết kiệm ròng của Gate M3:  {summary['gate_net_savings']:+.2f}s")
-    print(f"Tỷ lệ kích hoạt Gate:        {summary['gate_call_count']}/{len(df)} ({summary['gate_call_rate_pct']:.1f}%)")
+    print(f"Tổng số đồ thị kiểm thử:      {len(df)}")
+    print(f"Số ca chứng minh xong (Struct): {summary['struct_exhausted']}/{len(df)}")
+    print(f"Số ca chứng minh xong (Gate):   {summary['gate_exhausted']}/{len(df)}")
+    print(f"Tổng thời gian Structural:      {summary['struct_total_time']:.2f}s")
+    print(f"Tổng thời gian Always COPT:     {summary['always_total_time']:.2f}s")
+    print(f"Tổng thời gian Gate M3:         {summary['gate_total_time']:.2f}s")
+    print(f"Tiết kiệm ròng của Gate M3:     {summary['gate_net_savings']:+.2f}s")
+    if len(both_ex) > 0:
+        print(f"Tiết kiệm trên ca hoàn tất ({len(both_ex)} đồ thị): {summary['savings_on_both_exhausted']:+.2f}s")
+    print(f"Tỷ lệ kích hoạt Gate:           {summary['gate_call_count']}/{len(df)} ({summary['gate_call_rate_pct']:.1f}%)")
     print("="*70)
     return summary
+
 
 
 if __name__ == "__main__":

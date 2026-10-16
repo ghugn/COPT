@@ -156,12 +156,13 @@ def solve_online(adj, scorer=None, gate=None, top_k=None,
                 return
 
             if depth == 0 and priority is not None:
-                if top_k is not None and branches_taken >= top_k:
+                if top_k is not None and top_k > 0 and branches_taken >= top_k:
                     v = max(vertices(mask), key=lambda u: ((adj[u] & mask).bit_count(), -u))
                 else:
                     v = max(vertices(mask), key=lambda u: (priority[u], -u))
             else:
                 v = max(vertices(mask), key=lambda u: ((adj[u] & mask).bit_count(), -u))
+
 
             branches_taken += 1
             expand(clique + (v,), mask & adj[v], depth + 1)
